@@ -61,6 +61,12 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   )
 endif()
 
+if(MLIR_VULKAN_RUNNER_ENABLED)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-vulkan-runner
+  )
+endif()
+
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}

@@ -1,4 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES
+  mlir-vulkan-runner.cpp
+  vulkan-runtime-wrappers.cpp
   VulkanRuntime.cpp
   )
 
@@ -33,7 +35,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
   # Create archive for this moment.
   add_llvm_library(MLIRVulkanRuntime
     VulkanRuntime.cpp
-    )
+  )
 
   target_include_directories(MLIRVulkanRuntime PRIVATE ${Vulkan_INCLUDE_DIR})
 
@@ -42,5 +44,54 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     LLVMCore
     LLVMSupport
     ${Vulkan_LIBRARY}
-    )
+  )
+
+  add_llvm_library(vulkan-runtime-wrappers SHARED
+    vulkan-runtime-wrappers.cpp
+  )
+  target_include_directories(vulkan-runtime-wrappers
+    PRIVATE ${Vulkan_INCLUDE_DIR}
+    LLVMSupport
+  )
+  target_link_libraries(vulkan-runtime-wrappers
+    LLVMSupport
+    ${Vulkan_LIBRARY}
+  )
+
+  set(FULL_LINK_LIBS
+    MLIRAffineOps
+    MLIRLoopToStandard
+    MLIRGPU
+    MLIRGPUtoSPIRVTransforms
+    MLIRLLVMIR
+    MLIRSPIRV
+    MLIRSPIRVTransforms
+    MLIRStandardOps
+    MLIRStandardToLLVM
+    MLIRTargetLLVMIR
+    MLIRTransforms
+    MLIRTranslation
+  )
+
+  set(LIBS
+    MLIRIR
+    MLIRParser
+    MLIREDSC
+    MLIRAnalysis
+    MLIRExecutionEngine
+    MLIRJitRunner
+    MLIRSupport
+    LLVMCore
+    LLVMSupport
+  )
+  
+  add_llvm_executable(mlir-vulkan-runner
+    mlir-vulkan-runner.cpp
+  )
+  add_dependencies(mlir-vulkan-runner vulkan-runtime-wrappers)
+
+  llvm_update_compile_flags(mlir-vulkan-runner)
+  whole_archive_link(mlir-vulkan-runner ${FULL_LINK_LIBS})
+  target_link_libraries(mlir-vulkan-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+
 endif()
