@@ -5,6 +5,7 @@ add_public_tablegen_target(MLIRGPUToSPIRVIncGen)
 add_llvm_library(MLIRGPUtoSPIRVTransforms
   ConvertGPUToSPIRV.cpp
   ConvertGPUToSPIRVPass.cpp
+  ConvertLaunchFuncToSPIRVCalls.cpp
   )
 
 add_dependencies(MLIRGPUtoSPIRVTransforms
