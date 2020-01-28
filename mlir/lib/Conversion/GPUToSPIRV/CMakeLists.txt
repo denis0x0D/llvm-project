@@ -3,6 +3,7 @@ mlir_tablegen(GPUToSPIRV.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIRGPUToSPIRVIncGen)
 
 add_llvm_library(MLIRGPUtoSPIRVTransforms
+  ConvertKernelFunctionToSPIRV.cpp
   ConvertGPUToSPIRV.cpp
   ConvertGPUToSPIRVPass.cpp
   )
