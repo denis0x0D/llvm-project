@@ -46,6 +46,7 @@ else()
 endif()
 
 set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
+set(MLIR_VULKAN_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir Vulkan runner")
 
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
