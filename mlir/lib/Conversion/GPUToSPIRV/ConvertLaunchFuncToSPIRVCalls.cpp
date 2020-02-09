@@ -337,35 +337,25 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
     }
   }
 
-  // FIXME: how to handle unsigned types.
-  SmallVector<int32_t, 0> shader{binary.begin(), binary.end()};
+  std::vector<char> binaryShader;
+  binaryShader.resize(binary.size() * sizeof(uint32_t));
+  std::memcpy(binaryShader.data(), reinterpret_cast<char *>(binary.data()),
+              binaryShader.size());
 
-  // FIXME: Use cashed types.
-  OpBuilder moduleBuilder(module.getBodyRegion());
-  auto type = LLVM::LLVMType::getArrayTy(
-      LLVM::LLVMType::getInt32Ty(getLLVMDialect()), binary.size());
-  auto global = moduleBuilder.create<LLVM::GlobalOp>(
-      loc, type, /*isConstant=*/true, LLVM::Linkage::Internal, "binaryShader",
-      builder.getI32ArrayAttr(shader));
-
-  // Get the pointer to the first element in array.
-  Value binaryShaderPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-  Value cst0 = builder.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt64Ty(getLLVMDialect()),
-      builder.getIntegerAttr(builder.getIndexType(), 0));
-  builder.create<LLVM::GEPOp>(
-      loc, LLVM::LLVMType::getInt32Ty(getLLVMDialect()).getPointerTo(),
-      binaryShaderPtr, ArrayRef<Value>({cst0, cst0}));
+  Value ptrToExec = LLVM::createGlobalString(
+      loc, builder, "executable",
+      StringRef(binaryShader.data(), binaryShader.size()),
+      LLVM::Linkage::Internal, getLLVMDialect());
 
   // FIXME: Add size value.
   funcBuilder.create<LLVM::LLVMFuncOp>(
       loc, "setBinaryShader",
-      LLVM::LLVMType::getFunctionTy(llvmVoidType,
-                                    {llvmInt32Type.getPointerTo()},
+      LLVM::LLVMType::getFunctionTy(llvmVoidType, {llvmPointerType},
                                     /*isVarArg=*/false));
+
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
                                builder.getSymbolRefAttr("setBinaryShader"),
-                               ArrayRef<Value>{binaryShaderPtr});
+                               ArrayRef<Value>{ptrToExec});
   /*
 
   declareSPIRVFunctions(loc);
