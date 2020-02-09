@@ -16,6 +16,7 @@ target_link_libraries(MLIRGPUtoSPIRVTransforms
   MLIRIR
   MLIRPass
   MLIRSPIRV
+  MLIRSPIRVSerialization
   MLIRStandardOps
   MLIRStandardToSPIRVTransforms
   MLIRSupport

@@ -11,10 +11,10 @@ module attributes {gpu.container_module} {
     %0 = constant 2.0 : f32
     %1 = alloc() : memref<12xf32>
     %cst = constant 1 : index
-    call @printMemRegister() : () -> ()
+    call @bindMemoryBuffer() : () -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = "kernel_1", kernel_module = @kernels }
         : (index, index, index, index, index, index, f32, memref<12xf32>) -> ()
     return
   }
-  func @printMemRegister()
+  func @bindMemoryBuffer()
 }

@@ -10,6 +10,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Serialization.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
@@ -316,47 +317,58 @@ Value GpuLaunchFuncToSPIRVCallsPass::generateKernelNameConstant(
 // Emits LLVM IR to launch a kernel function. Expects the module that contains
 // the compiled kernel function as a cubin in the 'nvvm.cubin' attribute of the
 // kernel function in the IR.
-// While MLIR has no global constants, also expects a cubin getter function in
-// an 'nvvm.cubingetter' attribute. Such function is expected to return a
-// pointer to the cubin blob when invoked.
-// With these given, the generated code in essence is
-//
-// %0 = call %cubingetter
-// %1 = alloca sizeof(void*)
-// call %mcuModuleLoad(%2, %1)
-// %2 = alloca sizeof(void*)
-// %3 = load %1
-// %4 = <see generateKernelNameConstant>
-// call %mcuModuleGetFunction(%2, %3, %4)
-// %5 = call %mcuGetStreamHelper()
-// %6 = load %2
-// %7 = <see setupParamsArray>
-// call %mcuLaunchKernel(%6, <launchOp operands 0..5>, 0, %5, %7, nullptr)
-// call %mcuStreamSynchronize(%5)
 void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   ModuleOp module = getModule();
-  OpBuilder builder(module.getBody()->getTerminator());
+  OpBuilder funcBuilder(module.getBody()->getTerminator());
+  OpBuilder builder(launchOp);
 
   Location loc = launchOp.getLoc();
+
+  bool done = false;
+  SmallVector<uint32_t, 0> binary;
+  for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
+    if (done) {
+      return signalPassFailure();
+    }
+    done = true;
+    if (failed(spirv::serialize(spirvModule, binary))) {
+      return signalPassFailure();
+    }
+  }
+
+  // FIXME: how to handle unsigned types.
+  SmallVector<int32_t, 0> shader{binary.begin(), binary.end()};
+
+  // FIXME: Use cashed types.
+  OpBuilder moduleBuilder(module.getBodyRegion());
+  auto type = LLVM::LLVMType::getArrayTy(
+      LLVM::LLVMType::getInt32Ty(getLLVMDialect()), binary.size());
+  auto global = moduleBuilder.create<LLVM::GlobalOp>(
+      loc, type, /*isConstant=*/true, LLVM::Linkage::Internal, "binaryShader",
+      builder.getI32ArrayAttr(shader));
+
+  // Get the pointer to the first element in array.
+  Value binaryShaderPtr = builder.create<LLVM::AddressOfOp>(loc, global);
+  Value cst0 = builder.create<LLVM::ConstantOp>(
+      loc, LLVM::LLVMType::getInt64Ty(getLLVMDialect()),
+      builder.getIntegerAttr(builder.getIndexType(), 0));
+  builder.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMType::getInt32Ty(getLLVMDialect()).getPointerTo(),
+      binaryShaderPtr, ArrayRef<Value>({cst0, cst0}));
+
+  // FIXME: Add size value.
+  funcBuilder.create<LLVM::LLVMFuncOp>(
+      loc, "setBinaryShader",
+      LLVM::LLVMType::getFunctionTy(llvmVoidType,
+                                    {llvmInt32Type.getPointerTo()},
+                                    /*isVarArg=*/false));
+  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
+                               builder.getSymbolRefAttr("setBinaryShader"),
+                               ArrayRef<Value>{binaryShaderPtr});
   /*
 
   declareSPIRVFunctions(loc);
-
-  auto zero = builder.create<LLVM::ConstantOp>(loc, getInt32Type(),
-                                               builder.getI32IntegerAttr(0));
-  // Create an LLVM global with CUBIN extracted from the kernel annotation and
-  // obtain a pointer to the first byte in it.
-  auto kernelModule = getModule().lookupSymbol<gpu::GPUModuleOp>(
-      launchOp.getKernelModuleName());
-  assert(kernelModule && "expected a kernel module");
-
-  auto cubinAttr = kernelModule.getAttrOfType<StringAttr>(kCubinAnnotation);
-  if (!cubinAttr) {
-    kernelModule.emitOpError()
-        << "missing " << kCubinAnnotation << " attribute";
-    return signalPassFailure();
-  }
 
   SmallString<128> nameBuffer(kernelModule.getName());
   nameBuffer.append(kCubinStorageSuffix);
@@ -367,9 +379,7 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
   // Emit the load module call to load the module data. Error checking is done
   // in the called helper function.
   auto cuModule = allocatePointer(builder, loc);
-  auto cuModuleLoad =
-      getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleLoadName);
-  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getCUResultType()},
+  auto cuModuleLoad = getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleLoadName); builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getCUResultType()},
                                builder.getSymbolRefAttr(cuModuleLoad),
                                ArrayRef<Value>{cuModule, data});
   // Get the function from the module. The name corresponds to the name of

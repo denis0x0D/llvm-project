@@ -37,14 +37,12 @@
 
 using namespace mlir;
 using namespace llvm;
-/*
 static cl::opt<std::string>
     inputFilename(cl::Positional, cl::desc("<input file>"), cl::init(""));
 
 static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"));
-                                           */
 static LogicalResult runMLIRPasses(ModuleOp m) {
   PassManager pm(m.getContext());
   applyPassManagerCLOptions(pm);
@@ -61,8 +59,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   return pm.run(m);
 }
 
-/*
-int Main(int argc, char **argv) {
+int main(int argc, char **argv) {
   llvm::PrettyStackTraceProgram x(argc, argv);
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv,
@@ -96,9 +93,9 @@ int Main(int argc, char **argv) {
   return 0;
 }
 
-*/
-
+/*
 int main(int argc, char **argv) {
   registerPassManagerCLOptions();
   return mlir::JitRunnerMain(argc, argv, &runMLIRPasses);
 }
+*/
