@@ -16,7 +16,7 @@ add_llvm_library(MLIRGPUtoSPIRVTransforms
 add_dependencies(MLIRGPUtoSPIRVTransforms
   MLIRGPUToSPIRVIncGen)
 
-target_link_libraries(MLIRGPUtoSPIRVTransforms
+set(LIBS
   MLIRGPU
   MLIRIR
   MLIRPass
@@ -26,6 +26,8 @@ target_link_libraries(MLIRGPUtoSPIRVTransforms
   MLIRSupport
   MLIRTransforms
   )
+
+target_link_libraries(MLIRGPUtoSPIRVTransforms ${LIBS})
 
 add_llvm_library(MLIRGPUtoSPIRVConversion
   ConvertLaunchFuncToSPIRVCalls.cpp
@@ -35,14 +37,6 @@ add_dependencies(MLIRGPUtoSPIRVConversion
   MLIRGPUToSPIRVIncGen)
 
 target_link_libraries(MLIRGPUtoSPIRVConversion
-  MLIRGPU
-  MLIRIR
-  MLIRPass
-  MLIRSPIRV
+  ${LIBS}
   MLIRSPIRVSerialization
-  MLIRStandardOps
-  MLIRStandardToSPIRVTransforms
-  MLIRSupport
-  MLIRTransforms
   )
- 
