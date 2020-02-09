@@ -59,8 +59,8 @@ struct MemRef {
 
 extern "C" {
 void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
-                     const MemRef<float, 1> *memRef) {
-  std::fill_n(memRef->data, memRef->sizes[0], 1.0);
+                     const MemRef<float, 1> *memRef, float value) {
+  std::fill_n(memRef->data, memRef->sizes[0], value);
   VulkanHostMemoryBuffer memBuffer{
       memRef->data, static_cast<uint32_t>(memRef->sizes[0] * sizeof(float))};
   VulkanRuntimeManager::instance()->setResourceData(setIndex, bindIndex,
