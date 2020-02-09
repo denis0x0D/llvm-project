@@ -60,9 +60,7 @@ void VulkanRuntime::setResourceData(const ResourceData &resData) {
   resourceData = resData;
 }
 
-void VulkanRuntime::setShaderModule(llvm::ArrayRef<uint32_t> binaryRef) {
-  binary = SmallVector<uint32_t, 0>(binaryRef.begin(), binaryRef.end());
-}
+void VulkanRuntime::setShaderModule(uint32_t *shader) { binary = shader; }
 
 LogicalResult VulkanRuntime::mapStorageClassToDescriptorType(
     spirv::StorageClass storageClass, VkDescriptorType &descriptorType) {
@@ -113,10 +111,12 @@ LogicalResult VulkanRuntime::initRuntime() {
     llvm::errs() << "Vulkan runtime needs at least one resource";
     return failure();
   }
+  /*
   if (!binary.size()) {
     llvm::errs() << "binary shader size must be greater than zero";
     return failure();
   }
+  */
   if (failed(countDeviceMemorySize())) {
     return failure();
   }
@@ -436,9 +436,9 @@ LogicalResult VulkanRuntime::createShaderModule() {
   shaderModuleCreateInfo.pNext = nullptr;
   shaderModuleCreateInfo.flags = 0;
   // Set size in bytes.
-  shaderModuleCreateInfo.codeSize = binary.size() * sizeof(uint32_t);
+  shaderModuleCreateInfo.codeSize = binarySize;
   // Set pointer to the binary shader.
-  shaderModuleCreateInfo.pCode = reinterpret_cast<uint32_t *>(binary.data());
+  shaderModuleCreateInfo.pCode = binary;
   RETURN_ON_VULKAN_ERROR(
       vkCreateShaderModule(device, &shaderModuleCreateInfo, 0, &shaderModule),
       "vkCreateShaderModule");

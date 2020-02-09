@@ -19,13 +19,37 @@ class VulkanRuntimeManager {
       return runtimeManager;
     }
 
+    void setResourceData(DescriptorSetIndex setIndex, BindingIndex bindIndex,
+                         const VulkanHostMemoryBuffer &memBuffer) {
+      vulkanRuntime.setResourceData(setIndex, bindIndex, memBuffer);
+    }
+
+    void setEntryPoint(llvm::StringRef entryPoint) {
+      vulkanRuntime.setEntryPoint(entryPoint);
+    }
+
+    void setNumWorkGroups(NumWorkGroups numWorkGroups) {
+      vulkanRuntime.setNumWorkGroups(numWorkGroups);
+    }
+
+    void setShaderModule(uint32_t *shader) {
+      vulkanRuntime.setShaderModule(shader);
+    }
+
+    void runOnVulkan() {
+      vulkanRuntime.initRuntime();
+      vulkanRuntime.run();
+      vulkanRuntime.updateHostMemoryBuffers();
+      vulkanRuntime.destroy();
+    }
+
   private:
+    VulkanRuntimeManager() {}
     VulkanRuntime vulkanRuntime;
 };
 
-/*
-// A struct that corresponds to how MLIR represents memrefs.
-template <typename T, int N> struct MemRefType {
+template <typename T, int N>
+struct MemRef {
   T *basePtr;
   T *data;
   int64_t offset;
@@ -33,16 +57,26 @@ template <typename T, int N> struct MemRefType {
   int64_t strides[N];
 };
 
-template <typename T, int N>
-void memHostRegisterMemRef(const MemRefType<T, N> *arg, T value) {
-  auto count = std::accumulate(arg->sizes, arg->sizes + N, 1,
-                               std::multiplies<int64_t>());
-  std::fill_n(arg->data, count, value);
-  mcuMemHostRegister(arg->data, count * sizeof(T));
+extern "C" {
+void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
+                     const MemRef<float, 1> *memRef) {
+  VulkanHostMemoryBuffer memBuffer{
+      memRef->data, static_cast<uint32_t>(memRef->sizes[0] * sizeof(float))};
+  VulkanRuntimeManager::instance()->setResourceData(setIndex, bindIndex,
+                                                    memBuffer);
 }
 
-extern "C" void memHostRegisterMemRef1dFloat(const MemRefType<float, 1> *arg) {
+void setEntryPoint(const char *entryPoint) {
+  VulkanRuntimeManager::instance()->setEntryPoint(entryPoint);
 }
 
-extern "C" void printMemRegister() { llvm::errs() << "call foo "; }
-*/
+void setNumWorkGroups(uint32_t x, uint32_t y, uint32_t z) {
+  VulkanRuntimeManager::instance()->setNumWorkGroups({x, y, z});
+}
+
+void setBinaryShader(uint32_t *shader) {
+  VulkanRuntimeManager::instance()->setShaderModule(shader);
+}
+
+void runOnVulkan() { VulkanRuntimeManager::instance()->runOnVulkan(); }
+}

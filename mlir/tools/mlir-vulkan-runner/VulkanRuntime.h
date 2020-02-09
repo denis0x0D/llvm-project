@@ -115,7 +115,7 @@ public:
   void setResourceData(const DescriptorSetIndex desIndex,
                        const BindingIndex bindIndex,
                        const VulkanHostMemoryBuffer &hostMemBuffer);
-  void setShaderModule(llvm::ArrayRef<uint32_t> binaryRef);
+  void setShaderModule(uint32_t *shader);
   void setNumWorkGroups(const NumWorkGroups &nWorkGroups);
   void setResourceStorageClassData(const ResourceStorageClassData &stClassData);
   void setEntryPoint(llvm::StringRef entryPointName);
@@ -221,7 +221,8 @@ private:
 
   NumWorkGroups numWorkGroups;
   std::string entryPoint;
-  llvm::SmallVector<uint32_t, 0> binary;
+  uint32_t *binary;
+  uint32_t binarySize{0};
 
   //===--------------------------------------------------------------------===//
   // Vulkan resource data and storage classes.
