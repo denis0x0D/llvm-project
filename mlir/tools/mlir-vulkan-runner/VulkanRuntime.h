@@ -112,6 +112,9 @@ public:
 
   /// Sets needed data for Vulkan runtime.
   void setResourceData(const ResourceData &resData);
+  void setResourceData(const DescriptorSetIndex desIndex,
+                       const BindingIndex bindIndex,
+                       const VulkanHostMemoryBuffer &hostMemBuffer);
   void setShaderModule(llvm::ArrayRef<uint32_t> binaryRef);
   void setNumWorkGroups(const NumWorkGroups &nWorkGroups);
   void setResourceStorageClassData(const ResourceStorageClassData &stClassData);

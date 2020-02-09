@@ -44,6 +44,14 @@ void VulkanRuntime::setResourceStorageClassData(
   resourceStorageClassData = stClassData;
 }
 
+void VulkanRuntime::setResourceData(
+    const DescriptorSetIndex desIndex, const BindingIndex bindIndex,
+    const VulkanHostMemoryBuffer &hostMemBuffer) {
+  resourceData[desIndex][bindIndex] = hostMemBuffer;
+  resourceStorageClassData[desIndex][bindIndex] =
+      spirv::StorageClass::StorageBuffer;
+}
+
 void VulkanRuntime::setEntryPoint(llvm::StringRef entryPointName) {
   entryPoint = entryPointName.str();
 }
