@@ -60,7 +60,7 @@ void VulkanRuntime::setResourceData(const ResourceData &resData) {
   resourceData = resData;
 }
 
-void VulkanRuntime::setShaderModule(uint32_t *shader) { binary = shader; }
+void VulkanRuntime::setShaderModule(uint8_t *shader) { binary = shader; }
 
 LogicalResult VulkanRuntime::mapStorageClassToDescriptorType(
     spirv::StorageClass storageClass, VkDescriptorType &descriptorType) {
@@ -438,7 +438,7 @@ LogicalResult VulkanRuntime::createShaderModule() {
   // Set size in bytes.
   shaderModuleCreateInfo.codeSize = binarySize;
   // Set pointer to the binary shader.
-  shaderModuleCreateInfo.pCode = binary;
+  shaderModuleCreateInfo.pCode = reinterpret_cast<uint32_t *>(binary);
   RETURN_ON_VULKAN_ERROR(
       vkCreateShaderModule(device, &shaderModuleCreateInfo, 0, &shaderModule),
       "vkCreateShaderModule");

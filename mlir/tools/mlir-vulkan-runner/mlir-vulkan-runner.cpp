@@ -37,12 +37,14 @@
 
 using namespace mlir;
 using namespace llvm;
+/*
 static cl::opt<std::string>
     inputFilename(cl::Positional, cl::desc("<input file>"), cl::init(""));
 
 static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"));
+                                           */
 static LogicalResult runMLIRPasses(ModuleOp m) {
   PassManager pm(m.getContext());
   applyPassManagerCLOptions(pm);
@@ -58,7 +60,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   pm.addPass(createConvertGpuLaunchFuncToSPIRVCallsPass());
   return pm.run(m);
 }
-
+/*
 int main(int argc, char **argv) {
   llvm::PrettyStackTraceProgram x(argc, argv);
   llvm::InitLLVM y(argc, argv);
@@ -92,10 +94,9 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
+*/
 
-/*
 int main(int argc, char **argv) {
   registerPassManagerCLOptions();
   return mlir::JitRunnerMain(argc, argv, &runMLIRPasses);
 }
-*/
