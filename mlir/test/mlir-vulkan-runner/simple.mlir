@@ -2,17 +2,21 @@
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<12xf32>) attributes {gpu.kernel} {
+    gpu.func @kernel_1(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg3 : memref<8xf32>) attributes {gpu.kernel} {
+      %0 = "gpu.block_id"() {dimension = "x"} : () -> index
+      %1 = load %arg0[%0] : memref<8xf32>
       gpu.return
     }
   }
 
   func @main() {
-    %0 = constant 2.0 : f32
-    %1 = alloc() : memref<12xf32>
+    %arg0 = alloc() : memref<8xf32>
+    %arg1 = alloc() : memref<8xf32>
+    %arg2 = alloc() : memref<8xf32>
+    
     %cst = constant 1 : index
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = "kernel_1", kernel_module = @kernels }
-        : (index, index, index, index, index, index, f32, memref<12xf32>) -> ()
+    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %arg0, %arg1, %arg2) { kernel = "kernel_1", kernel_module = @kernels }
+        : (index, index, index, index, index, index, memref<8xf32>, memref<8xf32>, memref<8xf32>) -> ()
     return
   }
 }
