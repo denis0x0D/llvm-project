@@ -725,9 +725,6 @@ LogicalResult VulkanRuntime::updateHostMemoryBuffers() {
                                            reinterpret_cast<void **>(&payload)),
                                "vkMapMemory");
         std::memcpy(hostMemoryBuffer.ptr, payload, hostMemoryBuffer.size);
-        for (int i = 0; i < hostMemoryBuffer.size / 4; ++i) {
-          std::cout << reinterpret_cast<float *>(payload)[i] << " ";
-        }
         vkUnmapMemory(device, deviceMemoryBuffer.deviceMemory);
       }
     }

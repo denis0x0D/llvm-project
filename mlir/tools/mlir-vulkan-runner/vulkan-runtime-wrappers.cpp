@@ -8,7 +8,6 @@
 
 #include <cassert>
 #include <numeric>
-#include <iostream>
 
 #include "llvm/Support/raw_ostream.h"
 #include "VulkanRuntime.h"
@@ -70,8 +69,9 @@ void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
 
 void printMem(const MemRef<float, 1> *memRef) {
   for (int i = 0; i < memRef->sizes[0]; ++i){
-    std::cout << memRef->data[i] << " ";
+    llvm::outs() << memRef->data[i] << " ";
   }
+  llvm::outs() << '\n';
 }
 
 void setEntryPoint(const char *entryPoint) {
