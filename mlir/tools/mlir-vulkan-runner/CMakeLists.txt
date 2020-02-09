@@ -32,28 +32,20 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     message(FATAL_ERROR "Cannot find Vulkan library")
   endif()
 
-  # Create archive for this moment.
-  add_llvm_library(MLIRVulkanRuntime
+  add_llvm_library(vulkan-runtime-wrappers SHARED
+    vulkan-runtime-wrappers.cpp
     VulkanRuntime.cpp
   )
 
-  target_include_directories(MLIRVulkanRuntime PRIVATE ${Vulkan_INCLUDE_DIR})
-
-  target_link_libraries(MLIRVulkanRuntime
-    MLIRSPIRVSerialization
-    LLVMCore
-    LLVMSupport
-    ${Vulkan_LIBRARY}
-  )
-
-  add_llvm_library(vulkan-runtime-wrappers SHARED
-    vulkan-runtime-wrappers.cpp
-  )
   target_include_directories(vulkan-runtime-wrappers
     PRIVATE ${Vulkan_INCLUDE_DIR}
     LLVMSupport
   )
+
   target_link_libraries(vulkan-runtime-wrappers
+    LLVMSupport
+    MLIRSPIRVSerialization
+    LLVMCore
     LLVMSupport
     ${Vulkan_LIBRARY}
   )
