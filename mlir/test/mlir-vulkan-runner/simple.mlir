@@ -1,4 +1,5 @@
-//mlir-vulkan-runner simple.mlir --shared-libs=/home/khalikov/llvm-project/build/lib/libvulkan-runtime-wrappers.so --entry-point-result=void
+// RUN: mlir-vulkan-runner %s --shared-libs=%vulkan_wrapper_library_dir/libvulkan-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
+// mlir-vulkan-runner simple.mlir --shared-libs=/home/denis/llvm-project/build/lib/libvulkan-runtime-wrappers.so,/home/denis/llvm-project/build/lib/libmlir_runner_utils.so --entry-point-result=void
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
@@ -11,7 +12,8 @@ module attributes {gpu.container_module} {
       gpu.return
     }
   }
-
+  
+  // CHECK: [3.3,  3.3,  3.3,  3.3,  3.3,  3.3,  3.3,  3.3]
   func @main() {
     %arg0 = alloc() : memref<8xf32>
     %arg1 = alloc() : memref<8xf32>
@@ -26,15 +28,15 @@ module attributes {gpu.container_module} {
     call @setResourceData(%0, %1, %arg1, %value2) : (i32, i32, memref<8xf32>, f32) -> ()
     call @setResourceData(%0, %2, %arg2, %value0) : (i32, i32, memref<8xf32>, f32) -> ()
 
-    %cst = constant 1 : index
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %arg0, %arg1, %arg2) { kernel = "kernel_1", kernel_module = @kernels }
+    %cst1 = constant 1 : index
+    %cst8 = constant 8 : index
+    "gpu.launch_func"(%cst8, %cst1, %cst1, %cst1, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = "kernel_1", kernel_module = @kernels }
         : (index, index, index, index, index, index, memref<8xf32>, memref<8xf32>, memref<8xf32>) -> ()
 
-    call @printMem(%arg0) : (memref<8xf32>) -> ()
-    call @printMem(%arg1) : (memref<8xf32>) -> ()
-    call @printMem(%arg2) : (memref<8xf32>) -> ()
+    %4 = memref_cast %arg2 : memref<8xf32> to memref<?xf32>
+    call @print_memref_1d_f32(%4) : (memref<?xf32>) -> ()
     return
   }
   func @setResourceData(%0 : i32, %1 : i32, %arg2 : memref<8xf32>, %value : f32)
-  func @printMem(%arg2: memref<8xf32>)
+  func @print_memref_1d_f32(memref<?xf32>)
 }
