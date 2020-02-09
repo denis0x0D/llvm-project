@@ -30,6 +30,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ToolOutputFile.h"
 
+#include <iostream>
+
 #include "VulkanRuntime.h"
 #include <vulkan/vulkan.h>
 
@@ -678,7 +680,7 @@ LogicalResult VulkanRuntime::createComputeCommandBuffer() {
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipelineLayout, 0, descriptorSets.size(),
                           descriptorSets.data(), 0, 0);
-  vkCmdDispatch(commandBuffer, numWorkGroups.x, numWorkGroups.y,
+  vkCmdDispatch(commandBuffer, 8/*numWorkGroups.x*/, numWorkGroups.y,
                 numWorkGroups.z);
 
   // Commands end.
@@ -723,6 +725,9 @@ LogicalResult VulkanRuntime::updateHostMemoryBuffers() {
                                            reinterpret_cast<void **>(&payload)),
                                "vkMapMemory");
         std::memcpy(hostMemoryBuffer.ptr, payload, hostMemoryBuffer.size);
+        for (int i = 0; i < hostMemoryBuffer.size / 4; ++i) {
+          std::cout << reinterpret_cast<float *>(payload)[i] << " ";
+        }
         vkUnmapMemory(device, deviceMemoryBuffer.deviceMemory);
       }
     }

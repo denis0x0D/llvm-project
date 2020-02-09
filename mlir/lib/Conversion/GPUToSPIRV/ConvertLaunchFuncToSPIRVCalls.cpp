@@ -348,7 +348,7 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
       LLVM::Linkage::Internal, getLLVMDialect());
 
   auto binarySize = builder.create<LLVM::ConstantOp>(
-      loc, getInt32Type(), builder.getI32IntegerAttr(binary.size()));
+      loc, getInt32Type(), builder.getI32IntegerAttr(binaryShader.size()));
 
   // FIXME: Add size value.
   funcBuilder.create<LLVM::LLVMFuncOp>(
@@ -370,69 +370,6 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
                                builder.getSymbolRefAttr("runOnVulkan"),
                                ArrayRef<Value>{});
 
-  /*
-
-  declareSPIRVFunctions(loc);
-
-  SmallString<128> nameBuffer(kernelModule.getName());
-  nameBuffer.append(kCubinStorageSuffix);
-  Value data = LLVM::createGlobalString(
-      loc, builder, nameBuffer.str(), cubinAttr.getValue(),
-      LLVM::Linkage::Internal, getLLVMDialect());
-
-  // Emit the load module call to load the module data. Error checking is done
-  // in the called helper function.
-  auto cuModule = allocatePointer(builder, loc);
-  auto cuModuleLoad = getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleLoadName); builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getCUResultType()},
-                               builder.getSymbolRefAttr(cuModuleLoad),
-                               ArrayRef<Value>{cuModule, data});
-  // Get the function from the module. The name corresponds to the name of
-  // the kernel function.
-  auto cuOwningModuleRef =
-      builder.create<LLVM::LoadOp>(loc, getPointerType(), cuModule);
-  auto kernelName = generateKernelNameConstant(launchOp.kernel(), loc,
-  builder); auto cuFunction = allocatePointer(builder, loc); auto
-  cuModuleGetFunction =
-      getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuModuleGetFunctionName);
-  builder.create<LLVM::CallOp>(
-      loc, ArrayRef<Type>{getCUResultType()},
-      builder.getSymbolRefAttr(cuModuleGetFunction),
-      ArrayRef<Value>{cuFunction, cuOwningModuleRef, kernelName});
-  // Grab the global stream needed for execution.
-  auto cuGetStreamHelper =
-      getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuGetStreamHelperName);
-  auto cuStream = builder.create<LLVM::CallOp>(
-      loc, ArrayRef<Type>{getPointerType()},
-      builder.getSymbolRefAttr(cuGetStreamHelper), ArrayRef<Value>{});
-  // Invoke the function with required arguments.
-  auto cuLaunchKernel =
-      getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuLaunchKernelName);
-  auto cuFunctionRef =
-      builder.create<LLVM::LoadOp>(loc, getPointerType(), cuFunction);
-  auto paramsArray = setupParamsArray(launchOp, builder);
-  auto nullpointer =
-      builder.create<LLVM::IntToPtrOp>(loc, getPointerPointerType(), zero);
-      */
-  /*
-  builder.create<LLVM::CallOp>(
-      loc, ArrayRef<Type>{getCUResultType()},
-      builder.getSymbolRefAttr(cuLaunchKernel),
-      ArrayRef<Value>{cuFunctionRef, launchOp.getOperand(0),
-                      launchOp.getOperand(1), launchOp.getOperand(2),
-                      launchOp.getOperand(3), launchOp.getOperand(4),
-                      launchOp.getOperand(5), zero,
-                      cuStream.getResult(0),
-                      paramsArray,
-                      nullpointer });
-                      */
-  // Sync on the stream to make it synchronous.
-  /*
-  auto cuStreamSync =
-      getModule().lookupSymbol<LLVM::LLVMFuncOp>(cuStreamSynchronizeName);
-  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getCUResultType()},
-                               builder.getSymbolRefAttr(cuStreamSync),
-                               ArrayRef<Value>(cuStream.getResult(0)));
-                               */
   launchOp.erase();
 }
 

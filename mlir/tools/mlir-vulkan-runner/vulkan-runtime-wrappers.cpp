@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <numeric>
+#include <iostream>
 
 #include "llvm/Support/raw_ostream.h"
 #include "VulkanRuntime.h"
@@ -60,10 +61,17 @@ struct MemRef {
 extern "C" {
 void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
                      const MemRef<float, 1> *memRef) {
+  std::fill_n(memRef->data, memRef->sizes[0], 1.0);
   VulkanHostMemoryBuffer memBuffer{
       memRef->data, static_cast<uint32_t>(memRef->sizes[0] * sizeof(float))};
   VulkanRuntimeManager::instance()->setResourceData(setIndex, bindIndex,
                                                     memBuffer);
+}
+
+void printResourceData(const MemRef<float, 1> *memRef) {
+  for (int i = 0; i < memRef->sizes[0]; ++i){
+    std::cout << memRef->data[i] << " ";
+  }
 }
 
 void setEntryPoint(const char *entryPoint) {
@@ -78,5 +86,7 @@ void setBinaryShader(uint8_t *shader, uint32_t size) {
   VulkanRuntimeManager::instance()->setShaderModule(shader, size);
 }
 
-void runOnVulkan() { VulkanRuntimeManager::instance()->runOnVulkan(); }
+void runOnVulkan() { 
+  VulkanRuntimeManager::instance()->runOnVulkan(); 
+}
 }
