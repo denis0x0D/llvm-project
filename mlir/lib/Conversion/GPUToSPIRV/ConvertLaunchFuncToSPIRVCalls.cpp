@@ -347,15 +347,29 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
       StringRef(binaryShader.data(), binaryShader.size()),
       LLVM::Linkage::Internal, getLLVMDialect());
 
+  auto binarySize = builder.create<LLVM::ConstantOp>(
+      loc, getInt32Type(), builder.getI32IntegerAttr(binary.size()));
+
   // FIXME: Add size value.
   funcBuilder.create<LLVM::LLVMFuncOp>(
       loc, "setBinaryShader",
-      LLVM::LLVMType::getFunctionTy(llvmVoidType, {llvmPointerType},
+      LLVM::LLVMType::getFunctionTy(llvmVoidType,
+                                    {llvmPointerType, llvmInt32Type},
                                     /*isVarArg=*/false));
 
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
                                builder.getSymbolRefAttr("setBinaryShader"),
-                               ArrayRef<Value>{ptrToExec});
+                               ArrayRef<Value>{ptrToExec, binarySize});
+
+  funcBuilder.create<LLVM::LLVMFuncOp>(
+      loc, "runOnVulkan",
+      LLVM::LLVMType::getFunctionTy(llvmVoidType, {},
+                                    /*isVarArg=*/false));
+
+  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
+                               builder.getSymbolRefAttr("runOnVulkan"),
+                               ArrayRef<Value>{});
+
   /*
 
   declareSPIRVFunctions(loc);

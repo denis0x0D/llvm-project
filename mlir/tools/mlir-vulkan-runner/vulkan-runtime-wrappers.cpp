@@ -32,8 +32,8 @@ class VulkanRuntimeManager {
       vulkanRuntime.setNumWorkGroups(numWorkGroups);
     }
 
-    void setShaderModule(uint8_t *shader) {
-      vulkanRuntime.setShaderModule(shader);
+    void setShaderModule(uint8_t *shader, uint32_t size) {
+      vulkanRuntime.setShaderModule(shader, size);
     }
 
     void runOnVulkan() {
@@ -74,8 +74,8 @@ void setNumWorkGroups(uint32_t x, uint32_t y, uint32_t z) {
   VulkanRuntimeManager::instance()->setNumWorkGroups({x, y, z});
 }
 
-void setBinaryShader(uint8_t *shader) {
-  VulkanRuntimeManager::instance()->setShaderModule(shader);
+void setBinaryShader(uint8_t *shader, uint32_t size) {
+  VulkanRuntimeManager::instance()->setShaderModule(shader, size);
 }
 
 void runOnVulkan() { VulkanRuntimeManager::instance()->runOnVulkan(); }

@@ -115,7 +115,7 @@ public:
   void setResourceData(const DescriptorSetIndex desIndex,
                        const BindingIndex bindIndex,
                        const VulkanHostMemoryBuffer &hostMemBuffer);
-  void setShaderModule(uint8_t *shader);
+  void setShaderModule(uint8_t *shader, uint32_t size);
   void setNumWorkGroups(const NumWorkGroups &nWorkGroups);
   void setResourceStorageClassData(const ResourceStorageClassData &stClassData);
   void setEntryPoint(llvm::StringRef entryPointName);

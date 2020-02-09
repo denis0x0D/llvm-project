@@ -36,7 +36,8 @@
 using namespace mlir;
 
 void VulkanRuntime::setNumWorkGroups(const NumWorkGroups &nWorkGroups) {
-  numWorkGroups = nWorkGroups;
+  // TODO: Instrument work groups;
+  numWorkGroups = {8, 1, 1};
 }
 
 void VulkanRuntime::setResourceStorageClassData(
@@ -60,7 +61,10 @@ void VulkanRuntime::setResourceData(const ResourceData &resData) {
   resourceData = resData;
 }
 
-void VulkanRuntime::setShaderModule(uint8_t *shader) { binary = shader; }
+void VulkanRuntime::setShaderModule(uint8_t *shader, uint32_t size) {
+  binary = shader;
+  binarySize = size;
+}
 
 LogicalResult VulkanRuntime::mapStorageClassToDescriptorType(
     spirv::StorageClass storageClass, VkDescriptorType &descriptorType) {
@@ -536,7 +540,8 @@ LogicalResult VulkanRuntime::createComputePipeline() {
   stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
   stageInfo.module = shaderModule;
   // Set entry point.
-  stageInfo.pName = entryPoint.c_str();
+  // TODO: instrument entry point name
+  stageInfo.pName = "kernel_1";
   stageInfo.pSpecializationInfo = 0;
 
   VkComputePipelineCreateInfo computePipelineCreateInfo = {};
