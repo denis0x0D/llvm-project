@@ -95,67 +95,6 @@ inline void emitVulkanError(const llvm::Twine &message, VkResult error) {
     return failure();                                                          \
   }
 
-namespace {
-/// Processes spv.module and collects all needed information for VulkanRuntime.
-class SPIRVModuleInfoCollector {
-public:
-  explicit SPIRVModuleInfoCollector() = default;
-  std::string getEntryPoint() { return entryPoint; }
-  ResourceStorageClassData &getResourceStorageClassData() {
-    return resourceStorageClassData;
-  }
-  void processModule(spirv::ModuleOp module);
-
-private:
-  SPIRVModuleInfoCollector(const SPIRVModuleInfoCollector &) = delete;
-  SPIRVModuleInfoCollector &operator=(const SPIRVModuleInfoCollector &) = delete;
-  void processGlobalVariable(spirv::GlobalVariableOp varOp);
-  void processEntryPoint(spirv::EntryPointOp op);
-
-  std::string entryPoint;
-  ResourceStorageClassData resourceStorageClassData;
-};
-
-/// Processes ModuleOp to collect module specific information.
-/// Note: ModuleOp must be valid.
-void SPIRVModuleInfoCollector::processModule(spirv::ModuleOp module) {
-  for (auto &op : module.getBlock()) {
-    if (auto entryPointOp = dyn_cast<spirv::EntryPointOp>(op)) {
-      processEntryPoint(entryPointOp);
-    } else if (auto varOp = dyn_cast<spirv::GlobalVariableOp>(op)) {
-      processGlobalVariable(varOp);
-    }
-  }
-}
-
-/// Processes EntryPointOp to collect entry point.
-void SPIRVModuleInfoCollector::processEntryPoint(spirv::EntryPointOp op) {
-  entryPoint = op.fn().str();
-}
-
-/// Processes GlobalVariableOp to collect storage classes for resource data.
-void SPIRVModuleInfoCollector::processGlobalVariable(
-    spirv::GlobalVariableOp varOp) {
-  auto descriptorSetName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::DescriptorSet));
-  auto bindingName =
-      convertToSnakeCase(stringifyDecoration(spirv::Decoration::Binding));
-  auto descriptorSet = varOp.getAttrOfType<IntegerAttr>(descriptorSetName);
-  auto binding = varOp.getAttrOfType<IntegerAttr>(bindingName);
-
-  if (descriptorSet && binding) {
-    if (auto ptrType = varOp.type().dyn_cast<spirv::PointerType>()) {
-      auto descriptorBindingIndex = binding.getInt();
-      auto descriptorSetIndex = descriptorSet.getInt();
-      resourceStorageClassData[descriptorSetIndex][descriptorBindingIndex] =
-          ptrType.getStorageClass();
-    }
-  }
-}
-} // namespace
-
-namespace {
-
 /// Vulkan runtime.
 /// The purpose of this class is to run SPIR-V computation shader on Vulkan
 /// device.

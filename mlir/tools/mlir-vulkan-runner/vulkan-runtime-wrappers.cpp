@@ -10,7 +10,20 @@
 #include <numeric>
 
 #include "llvm/Support/raw_ostream.h"
+#include "VulkanRuntime.h"
 
+class VulkanRuntimeManager {
+  public:
+    static VulkanRuntimeManager *instance() {
+      static VulkanRuntimeManager *runtimeManager = new VulkanRuntimeManager;
+      return runtimeManager;
+    }
+
+  private:
+    VulkanRuntime vulkanRuntime;
+};
+
+/*
 // A struct that corresponds to how MLIR represents memrefs.
 template <typename T, int N> struct MemRefType {
   T *basePtr;
@@ -32,3 +45,4 @@ extern "C" void memHostRegisterMemRef1dFloat(const MemRefType<float, 1> *arg) {
 }
 
 extern "C" void printMemRegister() { llvm::errs() << "call foo "; }
+*/

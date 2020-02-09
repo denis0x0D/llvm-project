@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   mlir-vulkan-runner.cpp
   vulkan-runtime-wrappers.cpp
   VulkanRuntime.cpp
+  VulkanRuntime.h
   )
 
 if (MLIR_VULKAN_RUNNER_ENABLED)
