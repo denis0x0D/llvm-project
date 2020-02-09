@@ -8,6 +8,3 @@ target_link_libraries(MLIRSPIRVTests
   MLIRSPIRVSerialization)
 
 whole_archive_link(MLIRSPIRVTests MLIRSPIRV)
-
-add_subdirectory(Runtime)
-
