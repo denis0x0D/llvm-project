@@ -68,7 +68,7 @@ void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
                                                     memBuffer);
 }
 
-void printResourceData(const MemRef<float, 1> *memRef) {
+void printMem(const MemRef<float, 1> *memRef) {
   for (int i = 0; i < memRef->sizes[0]; ++i){
     std::cout << memRef->data[i] << " ";
   }

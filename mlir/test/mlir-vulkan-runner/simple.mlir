@@ -26,7 +26,12 @@ module attributes {gpu.container_module} {
     %cst = constant 1 : index
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %arg0, %arg1, %arg2) { kernel = "kernel_1", kernel_module = @kernels }
         : (index, index, index, index, index, index, memref<8xf32>, memref<8xf32>, memref<8xf32>) -> ()
+
+    call @printMem(%arg0) : (memref<8xf32>) -> ()
+    call @printMem(%arg1) : (memref<8xf32>) -> ()
+    call @printMem(%arg2) : (memref<8xf32>) -> ()
     return
   }
   func @setResourceData(%0 : i32, %1 : i32, %arg2 : memref<8xf32>)
+  func @printMem(%arg2: memref<8xf32>)
 }
