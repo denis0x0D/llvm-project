@@ -1,11 +1,15 @@
-//===- mlir-vulkan-runner.cpp - MLIR Vulkan Execution Driver---------------===//
+//===- mlir-vulkan-runner.cpp - MLIR Vulkan Execution Driver --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// TODO:
+//
+// This is a command line utility that executes an MLIR file on the Vulkan by
+// translating MLIR GPU module to SPIR-V and host part to LLVM IR before
+// JIT-compiling and executing the latter.
+//
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRVPass.h"
@@ -27,7 +31,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   pm.addPass(createGpuKernelOutliningPass());
   // Lower host part to LLVM dialect.
   pm.addPass(createLegalizeStdOpsForSPIRVLoweringPass());
-  // TODO: Handle work group size properly.
+  // TODO(denis0x0D): Handle work group size properly.
   pm.addPass(createConvertGPUToSPIRVPass({1, 1, 1}));
   OpPassManager &modulePM = pm.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createLowerABIAttributesPass());

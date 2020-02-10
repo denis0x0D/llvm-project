@@ -6,15 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cassert>
+#include <mutex>
 #include <numeric>
 
 #include "llvm/Support/raw_ostream.h"
 #include "VulkanRuntime.h"
 
-// TODO: Add comments and mutex.
+/// This class represents a bridge between VulkanRuntime and C style runtime
+/// wrappers. It's designed to handle single kernel and the main purpose to
+/// test a progressive lowering to SPIR-V.
 class VulkanRuntimeManager {
   public:
+    VulkanRuntimeManager(const VulkanRuntimeManager &) = delete;
+    VulkanRuntimeManager operator=(const VulkanRuntimeManager &) = delete;
+    ~VulkanRuntimeManager() = default;
+
     static VulkanRuntimeManager *instance() {
       static VulkanRuntimeManager *runtimeManager = new VulkanRuntimeManager;
       return runtimeManager;
@@ -22,22 +28,27 @@ class VulkanRuntimeManager {
 
     void setResourceData(DescriptorSetIndex setIndex, BindingIndex bindIndex,
                          const VulkanHostMemoryBuffer &memBuffer) {
+      std::lock_guard<std::mutex> lock(mutex);
       vulkanRuntime.setResourceData(setIndex, bindIndex, memBuffer);
     }
 
     void setEntryPoint(const char *entryPoint) {
+      std::lock_guard<std::mutex> lock(mutex);
       vulkanRuntime.setEntryPoint(entryPoint);
     }
 
     void setNumWorkGroups(NumWorkGroups numWorkGroups) {
+      std::lock_guard<std::mutex> lock(mutex);
       vulkanRuntime.setNumWorkGroups(numWorkGroups);
     }
 
     void setShaderModule(uint8_t *shader, uint32_t size) {
+      std::lock_guard<std::mutex> lock(mutex);
       vulkanRuntime.setShaderModule(shader, size);
     }
 
     void runOnVulkan() {
+      std::lock_guard<std::mutex> lock(mutex);
       vulkanRuntime.initRuntime();
       vulkanRuntime.run();
       vulkanRuntime.updateHostMemoryBuffers();
@@ -45,12 +56,13 @@ class VulkanRuntimeManager {
     }
 
   private:
-    VulkanRuntimeManager() {}
+    VulkanRuntimeManager() = default;
     VulkanRuntime vulkanRuntime;
+    std::mutex mutex;
 };
 
 template <typename T, int N>
-struct MemRef {
+struct MemRefT {
   T *basePtr;
   T *data;
   int64_t offset;
@@ -60,7 +72,7 @@ struct MemRef {
 
 extern "C" {
 void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
-                     const MemRef<float, 1> *memRef, float value) {
+                     const MemRefT<float, 1> *memRef, float value) {
   std::fill_n(memRef->data, memRef->sizes[0], value);
   VulkanHostMemoryBuffer memBuffer{
       memRef->data, static_cast<uint32_t>(memRef->sizes[0] * sizeof(float))};
