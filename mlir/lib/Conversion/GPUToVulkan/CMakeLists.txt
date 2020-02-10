@@ -5,11 +5,11 @@ add_llvm_library(MLIRGPUtoVulkanCallsConversion
 target_link_libraries(MLIRGPUtoVulkanCallsConversion
   MLIRGPU
   MLIRIR
+  MLIRLLVMIR
   MLIRPass
   MLIRSPIRV
+  MLIRSPIRVSerialization
   MLIRStandardOps
-  MLIRStandardToSPIRVTransforms
   MLIRSupport
   MLIRTransforms
-  MLIRSPIRVSerialization
   )
