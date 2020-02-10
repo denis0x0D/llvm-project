@@ -35,7 +35,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   pm.addPass(createConvertGPUToSPIRVPass({1, 1, 1}));
   OpPassManager &modulePM = pm.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createLowerABIAttributesPass());
-  pm.addPass(createConvertGpuLaunchFuncToSPIRVCallsPass());
+  pm.addPass(createConvertGpuLaunchFuncToVulkanCallsPass());
   pm.addPass(createLowerToLLVMPass());
   return pm.run(m);
 }

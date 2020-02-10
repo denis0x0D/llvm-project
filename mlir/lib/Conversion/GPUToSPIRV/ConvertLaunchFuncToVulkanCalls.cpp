@@ -1,4 +1,4 @@
-//===- ConvertLaunchFuncToSPIRVCalls.cpp - MLIR SPIRV lowering passes -----===//
+//===- ConvertLaunchFuncToVulkanCalls.cpp - MLIR Vulkan conversion passes -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,8 +36,8 @@ static constexpr const char *kSPIRVBinary = "SPIRV_BIN";
 
 namespace {
 
-class GpuLaunchFuncToSPIRVCallsPass
-    : public ModulePass<GpuLaunchFuncToSPIRVCallsPass> {
+class GpuLaunchFuncToVulkanCalssPass
+    : public ModulePass<GpuLaunchFuncToVulkanCalssPass> {
 private:
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
@@ -90,7 +90,7 @@ private:
 
 } // anonymous namespace
 
-void GpuLaunchFuncToSPIRVCallsPass::declareVulkanFunctions(Location loc) {
+void GpuLaunchFuncToVulkanCalssPass::declareVulkanFunctions(Location loc) {
   ModuleOp module = getModule();
   OpBuilder builder(module.getBody()->getTerminator());
 
@@ -125,7 +125,7 @@ void GpuLaunchFuncToSPIRVCallsPass::declareVulkanFunctions(Location loc) {
   }
 }
 
-Value GpuLaunchFuncToSPIRVCallsPass::createEntryPointNameConstant(
+Value GpuLaunchFuncToVulkanCalssPass::createEntryPointNameConstant(
     StringRef name, Location loc, OpBuilder &builder) {
   std::vector<char> shaderName(name.begin(), name.end());
   shaderName.push_back('\0');
@@ -137,7 +137,7 @@ Value GpuLaunchFuncToSPIRVCallsPass::createEntryPointNameConstant(
       LLVM::Linkage::Internal, llvmDialect);
 }
 
-LogicalResult GpuLaunchFuncToSPIRVCallsPass::createBinaryShader(
+LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
     ModuleOp module, std::vector<char> &binaryShader) {
   bool done = false;
   SmallVector<uint32_t, 0> binary;
@@ -157,7 +157,7 @@ LogicalResult GpuLaunchFuncToSPIRVCallsPass::createBinaryShader(
   return success();
 }
 
-void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
+void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   ModuleOp module = getModule();
   OpBuilder builder(launchOp);
@@ -169,7 +169,7 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
   // Serialize `spirv::Module` into binary form.
   std::vector<char> binary;
   if (failed(
-          GpuLaunchFuncToSPIRVCallsPass::createBinaryShader(module, binary))) {
+          GpuLaunchFuncToVulkanCalssPass::createBinaryShader(module, binary))) {
     return signalPassFailure();
   }
 
@@ -209,10 +209,10 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
 }
 
 std::unique_ptr<mlir::OpPassBase<mlir::ModuleOp>>
-mlir::createConvertGpuLaunchFuncToSPIRVCallsPass() {
-  return std::make_unique<GpuLaunchFuncToSPIRVCallsPass>();
+mlir::createConvertGpuLaunchFuncToVulkanCallsPass() {
+  return std::make_unique<GpuLaunchFuncToVulkanCalssPass>();
 }
 
-static PassRegistration<GpuLaunchFuncToSPIRVCallsPass>
-    pass("launch-func-to-spirv",
+static PassRegistration<GpuLaunchFuncToVulkanCalssPass>
+    pass("launch-func-to-vulkan",
          "Convert all launch_func ops to Vulkan runtime calls");

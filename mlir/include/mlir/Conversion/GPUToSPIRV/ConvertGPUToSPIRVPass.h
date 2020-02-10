@@ -28,7 +28,7 @@ std::unique_ptr<OpPassBase<ModuleOp>>
 createConvertGPUToSPIRVPass(ArrayRef<int64_t> workGroupSize);
 
 std::unique_ptr<OpPassBase<ModuleOp>>
-createConvertGpuLaunchFuncToSPIRVCallsPass();
+createConvertGpuLaunchFuncToVulkanCallsPass();
 
 } // namespace mlir
 #endif // MLIR_CONVERSION_GPUTOSPIRV_CONVERTGPUTOSPIRVPASS_H
