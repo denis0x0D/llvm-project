@@ -118,7 +118,7 @@ public:
   void setShaderModule(uint8_t *shader, uint32_t size);
   void setNumWorkGroups(const NumWorkGroups &nWorkGroups);
   void setResourceStorageClassData(const ResourceStorageClassData &stClassData);
-  void setEntryPoint(llvm::StringRef entryPointName);
+  void setEntryPoint(const char *entryPointName);
 
   /// Runtime initialization.
   LogicalResult initRuntime();
@@ -220,8 +220,8 @@ private:
   //===--------------------------------------------------------------------===//
 
   NumWorkGroups numWorkGroups;
-  std::string entryPoint;
-  uint8_t *binary;
+  const char *entryPoint{nullptr};
+  uint8_t *binary{nullptr};
   uint32_t binarySize{0};
 
   //===--------------------------------------------------------------------===//

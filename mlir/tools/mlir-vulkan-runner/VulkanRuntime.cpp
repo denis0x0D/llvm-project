@@ -55,8 +55,8 @@ void VulkanRuntime::setResourceData(
       spirv::StorageClass::StorageBuffer;
 }
 
-void VulkanRuntime::setEntryPoint(llvm::StringRef entryPointName) {
-  entryPoint = entryPointName.str();
+void VulkanRuntime::setEntryPoint(const char *entryPointName) {
+  entryPoint = entryPointName;
 }
 
 void VulkanRuntime::setResourceData(const ResourceData &resData) {
@@ -542,8 +542,7 @@ LogicalResult VulkanRuntime::createComputePipeline() {
   stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
   stageInfo.module = shaderModule;
   // Set entry point.
-  // TODO: instrument entry point name
-  stageInfo.pName = "kernel_1";
+  stageInfo.pName = entryPoint;
   stageInfo.pSpecializationInfo = 0;
 
   VkComputePipelineCreateInfo computePipelineCreateInfo = {};

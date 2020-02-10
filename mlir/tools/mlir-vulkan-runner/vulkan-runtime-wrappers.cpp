@@ -24,7 +24,7 @@ class VulkanRuntimeManager {
       vulkanRuntime.setResourceData(setIndex, bindIndex, memBuffer);
     }
 
-    void setEntryPoint(llvm::StringRef entryPoint) {
+    void setEntryPoint(const char *entryPoint) {
       vulkanRuntime.setEntryPoint(entryPoint);
     }
 
