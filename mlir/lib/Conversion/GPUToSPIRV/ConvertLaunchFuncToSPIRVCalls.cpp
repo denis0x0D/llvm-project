@@ -168,9 +168,6 @@ Value GpuLaunchFuncToSPIRVCallsPass::generateKernelNameConstant(
       LLVM::Linkage::Internal, llvmDialect);
 }
 
-// Emits LLVM IR to launch a kernel function. Expects the module that contains
-// the compiled kernel function as a cubin in the 'nvvm.cubin' attribute of the
-// kernel function in the IR.
 void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   ModuleOp module = getModule();
@@ -215,6 +212,23 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
                                builder.getSymbolRefAttr("setEntryPoint"),
                                ArrayRef<Value>{kernelName});
+
+  funcBuilder.create<LLVM::LLVMFuncOp>(
+      loc, "setNumWorkGroups",
+      LLVM::LLVMType::getFunctionTy(
+          llvmVoidType, {llvmInt32Type, llvmInt32Type, llvmInt32Type},
+          /*isVarArg=*/false));
+
+  Value x = builder.create<LLVM::ConstantOp>(
+      loc, getInt32Type(), builder.getI32IntegerAttr(launchOp.getOperand(0)));
+  Value y = builder.create<LLVM::ConstantOp>(
+      loc, getInt32Type(), builder.getI32IntegerAttr(launchOp.getOperand(1)));
+  Value z = builder.create<LLVM::ConstantOp>(
+      loc, getInt32Type(), builder.getI32IntegerAttr(launchOp.getOperand(2)));
+
+  builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{llvmVoidType},
+                               builder.getSymbolRefAttr("setNumWorkGroups"),
+                               ArrayRef<Value>{x, y, z});
 
   // FIXME: Add size value.
   funcBuilder.create<LLVM::LLVMFuncOp>(

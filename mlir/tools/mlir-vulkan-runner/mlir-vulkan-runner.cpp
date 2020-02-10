@@ -52,7 +52,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   pm.addPass(createGpuKernelOutliningPass());
   // Lower host part to LLVM dialect.
   pm.addPass(createLegalizeStdOpsForSPIRVLoweringPass());
-  // TODO: Handle work group size.
+  // TODO: Handle work group size properly
   pm.addPass(createConvertGPUToSPIRVPass({1, 1, 1}));
   OpPassManager &modulePM = pm.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createLowerABIAttributesPass());

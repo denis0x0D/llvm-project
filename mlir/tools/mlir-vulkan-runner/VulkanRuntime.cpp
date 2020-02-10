@@ -38,8 +38,7 @@
 using namespace mlir;
 
 void VulkanRuntime::setNumWorkGroups(const NumWorkGroups &nWorkGroups) {
-  // TODO: Instrument work groups;
-  numWorkGroups = {8, 1, 1};
+  numWorkGroups = numWorkGroups;
 }
 
 void VulkanRuntime::setResourceStorageClassData(
