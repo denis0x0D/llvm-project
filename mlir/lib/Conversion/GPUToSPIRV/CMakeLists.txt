@@ -1,7 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   ConvertGPUToSPIRV.cpp
   ConvertGPUToSPIRVPass.cpp
-  ConvertLaunchFuncToSPIRVCalls.cpp
+  ConvertLaunchFuncToVulkanCalls.cpp
   )
 
 set(LLVM_TARGET_DEFINITIONS GPUToSPIRV.td)
@@ -29,14 +29,11 @@ set(LIBS
 
 target_link_libraries(MLIRGPUtoSPIRVTransforms ${LIBS})
 
-add_llvm_library(MLIRGPUtoSPIRVConversion
-  ConvertLaunchFuncToSPIRVCalls.cpp
+add_llvm_library(MLIRGPUtoVulkanCallsConversion
+  ConvertLaunchFuncToVulkanCalls.cpp
   )
 
-add_dependencies(MLIRGPUtoSPIRVConversion
-  MLIRGPUToSPIRVIncGen)
-
-target_link_libraries(MLIRGPUtoSPIRVConversion
+target_link_libraries(MLIRGPUtoVulkanCallsConversion
   ${LIBS}
   MLIRSPIRVSerialization
   )

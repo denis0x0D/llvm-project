@@ -56,7 +56,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     MLIRLoopToStandard
     MLIRGPU
     MLIRGPUtoSPIRVTransforms
-    MLIRGPUtoSPIRVConversion
+    MLIRGPUtoVulkanCallsConversion
     MLIRLLVMIR
     MLIRSPIRV
     MLIRSPIRVTransforms
