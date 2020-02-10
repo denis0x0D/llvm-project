@@ -12,6 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "VulkanRuntime.h"
 
+// TODO: Add comments and mutex.
 class VulkanRuntimeManager {
   public:
     static VulkanRuntimeManager *instance() {

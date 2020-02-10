@@ -1,39 +1,17 @@
 //===- VulkanRuntime.cpp - MLIR Vulkan runtime ------------------*- C++ -*-===//
 //
-// Copyright 2019 The MLIR Authors.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 // =============================================================================
 //
 // This file provides a library for running a module on a Vulkan device.
-// Implements a Vulkan runtime to run a spirv::ModuleOp. It also defines a few
-// utility functions to extract information from a spirv::ModuleOp.
+// Implements a Vulkan runtime.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Passes.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Serialization.h"
-#include "mlir/IR/Module.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/StringExtras.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ToolOutputFile.h"
-
-#include <iostream>
-
 #include "VulkanRuntime.h"
-#include <vulkan/vulkan.h>
 
 using namespace mlir;
 
@@ -116,12 +94,10 @@ LogicalResult VulkanRuntime::initRuntime() {
     llvm::errs() << "Vulkan runtime needs at least one resource";
     return failure();
   }
-  /*
-  if (!binary.size()) {
+  if (!binarySize || !binary) {
     llvm::errs() << "binary shader size must be greater than zero";
     return failure();
   }
-  */
   if (failed(countDeviceMemorySize())) {
     return failure();
   }
