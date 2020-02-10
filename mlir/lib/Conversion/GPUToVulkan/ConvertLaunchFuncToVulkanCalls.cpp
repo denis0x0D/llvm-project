@@ -18,12 +18,6 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -130,11 +124,12 @@ Value GpuLaunchFuncToVulkanCalssPass::createEntryPointNameConstant(
   std::vector<char> shaderName(name.begin(), name.end());
   shaderName.push_back('\0');
 
-  std::string globalName =
+  std::string entryPointGlobalName =
       std::string(llvm::formatv("{0}_spv_entry_point_name", name));
   return LLVM::createGlobalString(
-      loc, builder, globalName, StringRef(shaderName.data(), shaderName.size()),
-      LLVM::Linkage::Internal, llvmDialect);
+      loc, builder, entryPointGlobalName,
+      StringRef(shaderName.data(), shaderName.size()), LLVM::Linkage::Internal,
+      getLLVMDialect());
 }
 
 LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
