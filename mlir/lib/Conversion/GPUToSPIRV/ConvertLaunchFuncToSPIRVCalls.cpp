@@ -55,21 +55,21 @@ private:
   LLVM::LLVMType getPointerType() { return llvmPointerType; }
   LLVM::LLVMType getInt32Type() { return llvmInt32Type; }
 
+  LogicalResult createBinaryShader(ModuleOp module,
+                                   std::vector<char> &binaryShader);
+  /// Declares all needed runtime functions.
   void declareVulkanFunctions(Location loc);
-  Value generateKernelNameConstant(StringRef name, Location loc,
-                                   OpBuilder &builder);
+  Value createEntryPointNameConstant(StringRef name, Location loc,
+                                     OpBuilder &builder);
   void translateGpuLaunchCalls(mlir::gpu::LaunchFuncOp launchOp);
-  LogicalResult generateBinaryShader(ModuleOp module,
-                                     std::vector<char> &binaryShader);
 
 public:
   void runOnModule() override {
     llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
     initializeCachedTypes();
 
-    getModule().walk([this](mlir::gpu::LaunchFuncOp op) {
-      translateGpuLaunchCalls(op);
-    });
+    getModule().walk(
+        [this](mlir::gpu::LaunchFuncOp op) { translateGpuLaunchCalls(op); });
 
     // Erase `gpu::GPUModuleOp` and `spirv::Module` operations.
     for (auto gpuModule :
@@ -125,19 +125,19 @@ void GpuLaunchFuncToSPIRVCallsPass::declareVulkanFunctions(Location loc) {
   }
 }
 
-Value GpuLaunchFuncToSPIRVCallsPass::generateKernelNameConstant(
+Value GpuLaunchFuncToSPIRVCallsPass::createEntryPointNameConstant(
     StringRef name, Location loc, OpBuilder &builder) {
-  // Make sure the trailing zero is included in the constant.
-  std::vector<char> kernelName(name.begin(), name.end());
-  kernelName.push_back('\0');
+  std::vector<char> shaderName(name.begin(), name.end());
+  shaderName.push_back('\0');
 
-  std::string globalName = std::string(llvm::formatv("{0}_kernel_name", name));
+  std::string globalName =
+      std::string(llvm::formatv("{0}_spv_entry_point_name", name));
   return LLVM::createGlobalString(
-      loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
+      loc, builder, globalName, StringRef(shaderName.data(), shaderName.size()),
       LLVM::Linkage::Internal, llvmDialect);
 }
 
-LogicalResult GpuLaunchFuncToSPIRVCallsPass::generateBinaryShader(
+LogicalResult GpuLaunchFuncToSPIRVCallsPass::createBinaryShader(
     ModuleOp module, std::vector<char> &binaryShader) {
   bool done = false;
   SmallVector<uint32_t, 0> binary;
@@ -162,15 +162,18 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
   ModuleOp module = getModule();
   OpBuilder builder(launchOp);
   Location loc = launchOp.getLoc();
-  
+
+  // Declare runtime functions.
   declareVulkanFunctions(loc);
 
+  // Serialize `spirv::Module` into binary form.
   std::vector<char> binary;
-  if (failed(GpuLaunchFuncToSPIRVCallsPass::generateBinaryShader(module,
-                                                                 binary))) {
+  if (failed(
+          GpuLaunchFuncToSPIRVCallsPass::createBinaryShader(module, binary))) {
     return signalPassFailure();
   }
 
+  // Create call to `setBinaryShader` runtime function.
   Value ptrToSPIRVBinary = LLVM::createGlobalString(
       loc, builder, kSPIRVBinary, StringRef(binary.data(), binary.size()),
       LLVM::Linkage::Internal, getLLVMDialect());
@@ -180,12 +183,14 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
                                builder.getSymbolRefAttr(kSetBinaryShader),
                                ArrayRef<Value>{ptrToSPIRVBinary, binarySize});
 
-  Value kernelName =
-      generateKernelNameConstant(launchOp.kernel(), loc, builder);
+  // Create call to `setEntryPoint` runtime function.
+  Value entryPointName =
+      createEntryPointNameConstant(launchOp.kernel(), loc, builder);
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getVoidType()},
                                builder.getSymbolRefAttr(kSetEntryPoint),
-                               ArrayRef<Value>{kernelName});
+                               ArrayRef<Value>{entryPointName});
 
+  // Create call to `setNumWorkGroups` runtime function.
   Value x = builder.create<LLVM::ConstantOp>(
       loc, getInt32Type(), builder.getI32IntegerAttr(launchOp.getOperand(0)));
   Value y = builder.create<LLVM::ConstantOp>(
@@ -195,6 +200,8 @@ void GpuLaunchFuncToSPIRVCallsPass::translateGpuLaunchCalls(
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getVoidType()},
                                builder.getSymbolRefAttr(kSetNumWorkGroups),
                                ArrayRef<Value>{x, y, z});
+
+  // Create call to `runOnVulkan` runtime function.
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getVoidType()},
                                builder.getSymbolRefAttr(kRunOnVulkan),
                                ArrayRef<Value>{});
@@ -208,4 +215,4 @@ mlir::createConvertGpuLaunchFuncToSPIRVCallsPass() {
 
 static PassRegistration<GpuLaunchFuncToSPIRVCallsPass>
     pass("launch-func-to-spirv",
-         "Convert all launch_func ops to SPIRV runtime calls");
+         "Convert all launch_func ops to Vulkan runtime calls");

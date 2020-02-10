@@ -1,9 +1,8 @@
 // RUN: mlir-vulkan-runner %s --shared-libs=%vulkan_wrapper_library_dir/libvulkan-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
-// mlir-vulkan-runner simple.mlir --shared-libs=/home/denis/llvm-project/build/lib/libvulkan-runtime-wrappers.so,/home/denis/llvm-project/build/lib/libmlir_runner_utils.so --entry-point-result=void
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg2 : memref<8xf32>) attributes {gpu.kernel} {
+    gpu.func @kernel_add(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg2 : memref<8xf32>) attributes {gpu.kernel} {
       %0 = "gpu.block_id"() {dimension = "x"} : () -> index
       %1 = load %arg0[%0] : memref<8xf32>
       %2 = load %arg1[%0] : memref<8xf32>
@@ -30,7 +29,7 @@ module attributes {gpu.container_module} {
 
     %cst1 = constant 1 : index
     %cst8 = constant 8 : index
-    "gpu.launch_func"(%cst8, %cst1, %cst1, %cst1, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = "kernel_1", kernel_module = @kernels }
+    "gpu.launch_func"(%cst8, %cst1, %cst1, %cst1, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = "kernel_add", kernel_module = @kernels }
         : (index, index, index, index, index, index, memref<8xf32>, memref<8xf32>, memref<8xf32>) -> ()
 
     %4 = memref_cast %arg2 : memref<8xf32> to memref<?xf32>
