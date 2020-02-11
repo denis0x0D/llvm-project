@@ -34,6 +34,7 @@ set(FULL_LINK_LIBS
   MLIRGPUtoNVVMTransforms
   MLIRGPUtoROCDLTransforms
   MLIRGPUtoSPIRVTransforms
+  MLIRGPUtoVulkanTransforms
   MLIRLinalgOps
   MLIRLinalgAnalysis
   MLIRLinalgEDSC
@@ -58,17 +59,20 @@ set(FULL_LINK_LIBS
   MLIRSPIRVTransforms
   MLIRStandardOps
   MLIRStandardToLLVM
+  MLIRSPIRVSerialization
   MLIRTransforms
   MLIRTransformUtils
   MLIRTestDialect
   MLIRTestIR
   MLIRTestPass
   MLIRTestTransforms
+  # MLIRTranslation is needed for MLIRSPIRVSerialization
+  MLIRTranslation
   MLIRSupport
   MLIRVectorOps
   MLIRVectorToLLVM
   MLIRVectorToLoops
-)
+  )
 set(LIBS
   MLIRIR
   MLIROptMain
