@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a pass to convert gpu.launch_func op into a sequence of
-// Vulkan runtime calls. The Vulkan runtime API is huge, so currently we don't
-// instrument a host part with calls to Vulkan API, instead we istrument a host
-// part with calls to small wrapper library which manages Vulkan runtime.
+// Vulkan runtime calls. The Vulkan runtime API surface is huge so currently we
+// don't expose separate external functions in IR for each of them, instead we
+// expose a few external functions to wrapper libraries which which manages
+// Vulkan runtime.
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,10 +70,12 @@ private:
   /// `spirv::serialize` function.
   LogicalResult createBinaryShader(ModuleOp module,
                                    std::vector<char> &binaryShader);
+
+  /// Creates a LLVM global for the given `name`.
   Value createEntryPointNameConstant(StringRef name, Location loc,
                                      OpBuilder &builder);
 
-  /// Creates a LLVM constant for each number of local workgroup and
+  /// Creates a LLVM constant for each dimension of local workgroup and
   /// populates the given `numWorkGroups`.
   LogicalResult createNumWorkGroups(Location loc, OpBuilder &builder,
                                     mlir::gpu::LaunchFuncOp launchOp,
@@ -80,25 +83,12 @@ private:
 
   /// Declares all needed runtime functions.
   void declareVulkanFunctions(Location loc);
+
+  /// Translates the given `launcOp` op to the sequence of Vulkan runtime calls
   void translateGpuLaunchCalls(mlir::gpu::LaunchFuncOp launchOp);
 
 public:
-  void runOnModule() override {
-    llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
-    initializeCachedTypes();
-
-    getModule().walk(
-        [this](mlir::gpu::LaunchFuncOp op) { translateGpuLaunchCalls(op); });
-
-    // Erase `gpu::GPUModuleOp` and `spirv::Module` operations.
-    for (auto gpuModule :
-         llvm::make_early_inc_range(getModule().getOps<gpu::GPUModuleOp>()))
-      gpuModule.erase();
-
-    for (auto spirvModule :
-         llvm::make_early_inc_range(getModule().getOps<spirv::ModuleOp>()))
-      spirvModule.erase();
-  }
+  void runOnModule() override;
 
 private:
   LLVM::LLVMDialect *llvmDialect;
@@ -108,6 +98,23 @@ private:
 };
 
 } // anonymous namespace
+
+void GpuLaunchFuncToVulkanCalssPass::runOnModule() {
+  llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
+  initializeCachedTypes();
+
+  getModule().walk(
+      [this](mlir::gpu::LaunchFuncOp op) { translateGpuLaunchCalls(op); });
+
+  // Erase `gpu::GPUModuleOp` and `spirv::Module` operations.
+  for (auto gpuModule :
+       llvm::make_early_inc_range(getModule().getOps<gpu::GPUModuleOp>()))
+    gpuModule.erase();
+
+  for (auto spirvModule :
+       llvm::make_early_inc_range(getModule().getOps<spirv::ModuleOp>()))
+    spirvModule.erase();
+}
 
 void GpuLaunchFuncToVulkanCalssPass::declareVulkanFunctions(Location loc) {
   ModuleOp module = getModule();
@@ -163,6 +170,7 @@ LogicalResult GpuLaunchFuncToVulkanCalssPass::createBinaryShader(
   SmallVector<uint32_t, 0> binary;
   for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
     if (done) {
+      spirvModule.emitError("should only contain one 'spv.module' op");
       return failure();
     }
     done = true;
@@ -203,9 +211,6 @@ void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
   ModuleOp module = getModule();
   OpBuilder builder(launchOp);
   Location loc = launchOp.getLoc();
-
-  // Declare runtime functions.
-  declareVulkanFunctions(loc);
 
   // Serialize `spirv::Module` into binary form.
   std::vector<char> binary;
@@ -254,6 +259,10 @@ void GpuLaunchFuncToVulkanCalssPass::translateGpuLaunchCalls(
   builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{getVoidType()},
                                builder.getSymbolRefAttr(kRunOnVulkan),
                                ArrayRef<Value>{});
+
+  // Declare runtime functions.
+  declareVulkanFunctions(loc);
+
   launchOp.erase();
 }
 
@@ -264,4 +273,4 @@ mlir::createConvertGpuLaunchFuncToVulkanCallsPass() {
 
 static PassRegistration<GpuLaunchFuncToVulkanCalssPass>
     pass("launch-func-to-vulkan",
-         "Convert all launch_func ops to Vulkan runtime calls");
+         "Convert gpu.launch_func op to Vulkan runtime calls");

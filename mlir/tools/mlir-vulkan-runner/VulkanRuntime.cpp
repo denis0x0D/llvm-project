@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 //
 // This file provides a library for running a module on a Vulkan device.
 // Implements a Vulkan runtime.
@@ -19,8 +19,8 @@ void VulkanRuntime::setNumWorkGroups(const NumWorkGroups &numberWorkGroups) {
   numWorkGroups = numberWorkGroups;
 }
 
-void VulkanRuntime::setResourceStorageClassData(
-    const ResourceStorageClassData &stClassData) {
+void VulkanRuntime::setResourceStorageClassBindingMap(
+    const ResourceStorageClassBindingMap &stClassData) {
   resourceStorageClassData = stClassData;
 }
 
@@ -55,6 +55,7 @@ LogicalResult VulkanRuntime::mapStorageClassToDescriptorType(
     descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     break;
   default:
+    llvm::errs() << "unsupported storage class";
     return failure();
   }
   return success();
@@ -70,6 +71,7 @@ LogicalResult VulkanRuntime::mapStorageClassToBufferUsageFlag(
     bufferUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     break;
   default:
+    llvm::errs() << "unsupported storage class";
     return failure();
   }
   return success();
@@ -82,6 +84,8 @@ LogicalResult VulkanRuntime::countDeviceMemorySize() {
       if (resourceDataBindingPair.second.size) {
         memorySize += resourceDataBindingPair.second.size;
       } else {
+        llvm::errs()
+            << "expected buffer size greater than zero for resource data";
         return failure();
       }
     }
@@ -105,6 +109,14 @@ LogicalResult VulkanRuntime::initRuntime() {
 }
 
 LogicalResult VulkanRuntime::destroy() {
+  // According to Vulkan spec:
+  // "To ensure that no work is active on the device, vkDeviceWaitIdle can be
+  // used to gate the destruction of the device. Prior to destroying a device,
+  // an application is responsible for destroying/freeing any Vulkan objects
+  // that were created using that device as the first parameter of the
+  // corresponding vkCreate* or vkAllocate* command."
+  RETURN_ON_VULKAN_ERROR(vkDeviceWaitIdle(device), "vkDeviceWaitIdle");
+
   // Free and destroy.
   vkFreeCommandBuffers(device, commandPool, commandBuffers.size(),
                        commandBuffers.data());
@@ -129,8 +141,6 @@ LogicalResult VulkanRuntime::destroy() {
     }
   }
 
-  // Wait for device.
-  RETURN_ON_VULKAN_ERROR(vkDeviceWaitIdle(device), "vkDeviceWaitIdle");
   vkDestroyDevice(device, nullptr);
   vkDestroyInstance(instance, nullptr);
   return success();
@@ -642,7 +652,7 @@ LogicalResult VulkanRuntime::createComputeCommandBuffer() {
   commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   commandBufferBeginInfo.pNext = nullptr;
   commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  commandBufferBeginInfo.pInheritanceInfo = 0;
+  commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
   // Commands begin.
   RETURN_ON_VULKAN_ERROR(
@@ -666,7 +676,7 @@ LogicalResult VulkanRuntime::createComputeCommandBuffer() {
 }
 
 LogicalResult VulkanRuntime::submitCommandBuffersToQueue() {
-  VkSubmitInfo submitInfo;
+  VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.pNext = nullptr;
   submitInfo.waitSemaphoreCount = 0;

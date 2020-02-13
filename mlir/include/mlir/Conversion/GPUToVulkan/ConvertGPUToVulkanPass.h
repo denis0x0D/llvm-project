@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The file declares a pass to convert GPU to Vulkan runtime calls.
+// The file declares a pass to convert GPU dialect ops to to Vulkan runtime
+// calls.
 //
 //===----------------------------------------------------------------------===//
 

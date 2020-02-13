@@ -25,18 +25,18 @@
 
 using namespace mlir;
 
-static LogicalResult runMLIRPasses(ModuleOp m) {
-  PassManager pm(m.getContext());
-  applyPassManagerCLOptions(pm);
+static LogicalResult runMLIRPasses(ModuleOp module) {
+  PassManager passManager(module.getContext());
+  applyPassManagerCLOptions(passManager);
 
-  pm.addPass(createGpuKernelOutliningPass());
-  pm.addPass(createLegalizeStdOpsForSPIRVLoweringPass());
-  pm.addPass(createConvertGPUToSPIRVPass());
-  OpPassManager &modulePM = pm.nest<spirv::ModuleOp>();
+  passManager.addPass(createGpuKernelOutliningPass());
+  passManager.addPass(createLegalizeStdOpsForSPIRVLoweringPass());
+  passManager.addPass(createConvertGPUToSPIRVPass());
+  OpPassManager &modulePM = passManager.nest<spirv::ModuleOp>();
   modulePM.addPass(spirv::createLowerABIAttributesPass());
-  pm.addPass(createConvertGpuLaunchFuncToVulkanCallsPass());
-  pm.addPass(createLowerToLLVMPass());
-  return pm.run(m);
+  passManager.addPass(createConvertGpuLaunchFuncToVulkanCallsPass());
+  passManager.addPass(createLowerToLLVMPass());
+  return passManager.run(module);
 }
 
 int main(int argc, char **argv) {

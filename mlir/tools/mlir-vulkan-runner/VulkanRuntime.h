@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 //
 // This file declares Vulkan runtime API.
 //
@@ -33,7 +33,7 @@ using BindingIndex = uint32_t;
 struct VulkanDeviceMemoryBuffer {
   BindingIndex bindingIndex{0};
   VkDescriptorType descriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};
-  VkDescriptorBufferInfo bufferInfo{VK_NULL_HANDLE};
+  VkDescriptorBufferInfo bufferInfo{};
   VkBuffer buffer{VK_NULL_HANDLE};
   VkDeviceMemory deviceMemory{VK_NULL_HANDLE};
 };
@@ -70,7 +70,7 @@ using ResourceData =
                    llvm::DenseMap<BindingIndex, VulkanHostMemoryBuffer>>;
 
 /// StorageClass mapped into a descriptor set and a binding.
-using ResourceStorageClassData =
+using ResourceStorageClassBindingMap =
     llvm::DenseMap<DescriptorSetIndex,
                    llvm::DenseMap<BindingIndex, mlir::spirv::StorageClass>>;
 
@@ -86,10 +86,10 @@ inline void emitVulkanError(const llvm::Twine &message, VkResult error) {
   }
 
 /// Vulkan runtime.
-/// The purpose of this class is to run SPIR-V computation shader on Vulkan
+/// The purpose of this class is to run SPIR-V compute shader on Vulkan
 /// device.
 /// Before the run, user must provide and set resource data with descriptors,
-/// spir-v shader, number of work groups and entry point. After the creation of
+/// SPIR-V shader, number of work groups and entry point. After the creation of
 /// VulkanRuntime, special methods must be called in the following
 /// sequence: initRuntime(), run(), updateHostMemoryBuffers(), destroy();
 /// each method in the sequence returns succes or failure depends on the Vulkan
@@ -107,7 +107,8 @@ public:
                        const VulkanHostMemoryBuffer &hostMemBuffer);
   void setShaderModule(uint8_t *shader, uint32_t size);
   void setNumWorkGroups(const NumWorkGroups &numberWorkGroups);
-  void setResourceStorageClassData(const ResourceStorageClassData &stClassData);
+  void setResourceStorageClassBindingMap(
+      const ResourceStorageClassBindingMap &stClassData);
   void setEntryPoint(const char *entryPointName);
 
   /// Runtime initialization.
@@ -219,6 +220,6 @@ private:
   //===--------------------------------------------------------------------===//
 
   ResourceData resourceData;
-  ResourceStorageClassData resourceStorageClassData;
+  ResourceStorageClassBindingMap resourceStorageClassData;
 };
 #endif

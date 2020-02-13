@@ -7,28 +7,30 @@
 //===----------------------------------------------------------------------===//
 //
 // Implements C runtime wrappers around the VulkanRuntime.
-// Also adds VulkanRuntimeManager class to manage VulkanRuntime.
 //
 //===----------------------------------------------------------------------===//
 
 #include <mutex>
 #include <numeric>
 
-#include "llvm/Support/raw_ostream.h"
 #include "VulkanRuntime.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
 
-/// This class represents a bridge between VulkanRuntime and C style runtime
-/// wrappers. It's designed to handle single SPIR-V compute shader.
+namespace {
+
+// TODO(denis0x0D): This static machinery should be replaced by `initVulkan` and
+// `deinitVulkan` to be more explicit and to avoid static initialization and
+// destruction.
+class VulkanRuntimeManager;
+static llvm::ManagedStatic<VulkanRuntimeManager> vkRuntimeManager;
+
 class VulkanRuntimeManager {
   public:
+    VulkanRuntimeManager() = default;
     VulkanRuntimeManager(const VulkanRuntimeManager &) = delete;
     VulkanRuntimeManager operator=(const VulkanRuntimeManager &) = delete;
     ~VulkanRuntimeManager() = default;
-
-    static VulkanRuntimeManager *instance() {
-      static VulkanRuntimeManager *runtimeManager = new VulkanRuntimeManager;
-      return runtimeManager;
-    }
 
     void setResourceData(DescriptorSetIndex setIndex, BindingIndex bindIndex,
                          const VulkanHostMemoryBuffer &memBuffer) {
@@ -61,10 +63,11 @@ class VulkanRuntimeManager {
     }
 
   private:
-    VulkanRuntimeManager() = default;
     VulkanRuntime vulkanRuntime;
     std::mutex mutex;
 };
+
+} // namespace
 
 extern "C" {
 /// Fills the given memref with the given value.
@@ -75,21 +78,20 @@ void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
   std::fill_n(allocated, size, value);
   VulkanHostMemoryBuffer memBuffer{allocated,
                                    static_cast<uint32_t>(size * sizeof(float))};
-  VulkanRuntimeManager::instance()->setResourceData(setIndex, bindIndex,
-                                                    memBuffer);
+  vkRuntimeManager->setResourceData(setIndex, bindIndex, memBuffer);
 }
 
 void setEntryPoint(const char *entryPoint) {
-  VulkanRuntimeManager::instance()->setEntryPoint(entryPoint);
+  vkRuntimeManager->setEntryPoint(entryPoint);
 }
 
 void setNumWorkGroups(uint32_t x, uint32_t y, uint32_t z) {
-  VulkanRuntimeManager::instance()->setNumWorkGroups({x, y, z});
+  vkRuntimeManager->setNumWorkGroups({x, y, z});
 }
 
 void setBinaryShader(uint8_t *shader, uint32_t size) {
-  VulkanRuntimeManager::instance()->setShaderModule(shader, size);
+  vkRuntimeManager->setShaderModule(shader, size);
 }
 
-void runOnVulkan() { VulkanRuntimeManager::instance()->runOnVulkan(); }
+void runOnVulkan() { vkRuntimeManager->runOnVulkan(); }
 }
