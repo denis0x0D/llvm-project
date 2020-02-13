@@ -1,0 +1,91 @@
+set(LLVM_OPTIONAL_SOURCES
+  mlir-vulkan-runner.cpp
+  vulkan-runtime-wrappers.cpp
+  VulkanRuntime.cpp
+  VulkanRuntime.h
+  )
+
+if (MLIR_VULKAN_RUNNER_ENABLED)
+  message(STATUS "Building the Vulkan runner")
+
+  # At first try "FindVulkan" from:
+  # https://cmake.org/cmake/help/v3.7/module/FindVulkan.html
+  if (NOT CMAKE_VERSION VERSION_LESS 3.7.0)
+    find_package(Vulkan)
+  endif()
+
+  # If Vulkan is not found try a path specified by VULKAN_SDK.
+  if (NOT Vulkan_FOUND)
+    if ("$ENV{VULKAN_SDK}" STREQUAL "")
+      message(FATAL_ERROR "Please use at least CMAKE 3.7.0 or provide VULKAN_SDK
+       path as an environment variable")
+    endif()
+
+    find_library(Vulkan_LIBRARY vulkan HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
+    if (Vulkan_LIBRARY)
+      set(Vulkan_FOUND ON)
+      set(Vulkan_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
+      message(STATUS "Found Vulkan: " ${Vulkan_LIBRARY})
+    endif()
+  endif()
+
+  if (NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Cannot find Vulkan library")
+  endif()
+
+  add_llvm_library(vulkan-runtime-wrappers SHARED
+    vulkan-runtime-wrappers.cpp
+    VulkanRuntime.cpp
+  )
+
+  target_include_directories(vulkan-runtime-wrappers
+    PRIVATE ${Vulkan_INCLUDE_DIR}
+    LLVMSupport
+  )
+
+  target_link_libraries(vulkan-runtime-wrappers
+    LLVMSupport
+    MLIRSPIRVSerialization
+    LLVMCore
+    LLVMSupport
+    ${Vulkan_LIBRARY}
+  )
+
+  set(FULL_LINK_LIBS
+    MLIRAffineOps
+    MLIRLoopToStandard
+    MLIRGPU
+    MLIRGPUtoSPIRVTransforms
+    MLIRGPUtoVulkanTransforms
+    MLIRLLVMIR
+    MLIRSPIRV
+    MLIRSPIRVTransforms
+    MLIRStandardOps
+    MLIRStandardToLLVM
+    MLIRTargetLLVMIR
+    MLIRTransforms
+    MLIRTranslation
+  )
+
+  set(LIBS
+    MLIRIR
+    MLIRParser
+    MLIREDSC
+    MLIRAnalysis
+    MLIRExecutionEngine
+    MLIRJitRunner
+    MLIRSupport
+    LLVMCore
+    LLVMSupport
+  )
+
+  add_llvm_executable(mlir-vulkan-runner
+    mlir-vulkan-runner.cpp
+  )
+  add_dependencies(mlir-vulkan-runner vulkan-runtime-wrappers)
+
+  llvm_update_compile_flags(mlir-vulkan-runner)
+  whole_archive_link(mlir-vulkan-runner ${FULL_LINK_LIBS})
+  target_link_libraries(mlir-vulkan-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+
+endif()
