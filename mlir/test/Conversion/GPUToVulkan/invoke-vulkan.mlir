@@ -36,8 +36,8 @@ module attributes {gpu.container_module} {
     }
   }
   func @foo() {
-    %0 = "op"() : () -> f32
-    %1 = "op"() : () -> memref<12xf32>
+    %0 = constant 0.0 : f32
+    %1 = alloc() : memref<12xf32>
     %c1 = constant 1 : index
     "gpu.launch_func"(%c1, %c1, %c1, %c1, %c1, %c1, %0, %1) {kernel = "kernel", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<12xf32>) -> ()
     return

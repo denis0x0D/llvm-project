@@ -70,15 +70,30 @@ class VulkanRuntimeManager {
 } // namespace
 
 extern "C" {
-/// Fills the given memref with the given value.
+
+void *initVulkan() { return new VulkanRuntimeManager(); }
+
+void deinitVulkan(void *vkManager) {
+  if (vkManager)
+    delete reinterpret_cast<VulkanRuntimeManager *>(vkManager);
+}
+
 /// Binds the given memref to the given descriptor set and descriptor index.
-void setResourceData(const DescriptorSetIndex setIndex, BindingIndex bindIndex,
-                     float *allocated, float *aligned, int64_t offset,
-                     int64_t size, int64_t stride, float value) {
-  std::fill_n(allocated, size, value);
-  VulkanHostMemoryBuffer memBuffer{allocated,
+void bindResource(DescriptorSetIndex setIndex, BindingIndex bindIndex,
+                  float *ptr, int64_t size) {
+  VulkanHostMemoryBuffer memBuffer{ptr,
                                    static_cast<uint32_t>(size * sizeof(float))};
   vkRuntimeManager->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+void runOnVulkan() { vkRuntimeManager->runOnVulkan(); }
+
+/// Fills the given memref with the given value.
+void fillResource1DFloat(float *allocated, float *aligned, int64_t offset,
+                         int64_t size, int64_t stride, float value) {
+  if (!allocated)
+    llvm::errs() << "passed nullptr";
+  std::fill_n(allocated, size, value);
 }
 
 void setEntryPoint(const char *entryPoint) {
@@ -92,6 +107,4 @@ void setNumWorkGroups(uint32_t x, uint32_t y, uint32_t z) {
 void setBinaryShader(uint8_t *shader, uint32_t size) {
   vkRuntimeManager->setShaderModule(shader, size);
 }
-
-void runOnVulkan() { vkRuntimeManager->runOnVulkan(); }
 }
