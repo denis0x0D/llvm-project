@@ -233,6 +233,16 @@ private:
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
 
   //===--------------------------------------------------------------------===//
+  // Debug
+  //===--------------------------------------------------------------------===//
+
+  /// Processes a SPIR-V OpLine instruction with the given `operands`.
+  LogicalResult processDebugLine(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpString instruction with the given `operands`.
+  LogicalResult processDebugString(ArrayRef<uint32_t> operands);
+
+  //===--------------------------------------------------------------------===//
   // Control flow
   //===--------------------------------------------------------------------===//
 
@@ -376,6 +386,10 @@ private:
   /// The SPIR-V binary module.
   ArrayRef<uint32_t> binary;
 
+  /// Contains the data of the OpLine instruction which precedes the current
+  /// processing instruction.
+  SmallVector<uint32_t, 3> debugLine;
+
   /// The current word offset into the binary module.
   unsigned curOffset = 0;
 
@@ -443,6 +457,9 @@ private:
 
   // Result <id> to name mapping.
   DenseMap<uint32_t, StringRef> nameMap;
+
+  // Result <id> to debug info mapping.
+  DenseMap<uint32_t, StringRef> debugInfoMap;
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttributeList> decorations;
@@ -1995,6 +2012,36 @@ LogicalResult Deserializer::structurizeControlFlow() {
 }
 
 //===----------------------------------------------------------------------===//
+// Debug
+//===----------------------------------------------------------------------===//
+
+LogicalResult Deserializer::processDebugLine(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3)
+    return emitError(unknownLoc, "OpLine must have 3 operands");
+  debugLine = {operands.begin(), operands.end()};
+  return success();
+}
+
+LogicalResult Deserializer::processDebugString(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 2) {
+    return emitError(unknownLoc, "OpString needs at least 2 operands");
+  }
+  if (!debugInfoMap.lookup(operands[0]).empty()) {
+    return emitError(unknownLoc,
+                     "duplicate debug string found for result <id> ")
+           << operands[0];
+  }
+  unsigned wordIndex = 1;
+  StringRef debugString = decodeStringLiteral(operands, wordIndex);
+  if (wordIndex != operands.size()) {
+    return emitError(unknownLoc,
+                     "unexpected trailing words in OpString instruction");
+  }
+  debugInfoMap[operands[0]] = debugString;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Instruction
 //===----------------------------------------------------------------------===//
 
@@ -2085,10 +2132,13 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
       return processGlobalVariable(operands);
     }
     break;
+  case spirv::Opcode::OpLine:
+    return processDebugLine(operands);
   case spirv::Opcode::OpName:
     return processName(operands);
-  case spirv::Opcode::OpModuleProcessed:
   case spirv::Opcode::OpString:
+    return processDebugString(operands);
+  case spirv::Opcode::OpModuleProcessed:
   case spirv::Opcode::OpSource:
   case spirv::Opcode::OpSourceContinued:
   case spirv::Opcode::OpSourceExtension:
@@ -2214,6 +2264,7 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     interface.push_back(opBuilder.getSymbolRefAttr(arg.getOperation()));
     wordIndex++;
   }
+
   opBuilder.create<spirv::EntryPointOp>(unknownLoc, exec_model,
                                         opBuilder.getSymbolRefAttr(fnName),
                                         opBuilder.getArrayAttr(interface));

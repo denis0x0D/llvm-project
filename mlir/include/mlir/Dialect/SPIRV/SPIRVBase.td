@@ -3079,6 +3079,7 @@ def SPV_OC_OpSourceExtension           : I32EnumAttrCase<"OpSourceExtension", 4>
 def SPV_OC_OpName                      : I32EnumAttrCase<"OpName", 5>;
 def SPV_OC_OpMemberName                : I32EnumAttrCase<"OpMemberName", 6>;
 def SPV_OC_OpString                    : I32EnumAttrCase<"OpString", 7>;
+def SPV_OC_OpLine                      : I32EnumAttrCase<"OpLine", 8>;
 def SPV_OC_OpExtension                 : I32EnumAttrCase<"OpExtension", 10>;
 def SPV_OC_OpExtInstImport             : I32EnumAttrCase<"OpExtInstImport", 11>;
 def SPV_OC_OpExtInst                   : I32EnumAttrCase<"OpExtInst", 12>;
@@ -3223,7 +3224,7 @@ def SPV_OpcodeAttr :
     SPV_I32EnumAttr<"Opcode", "valid SPIR-V instructions", [
       SPV_OC_OpNop, SPV_OC_OpUndef, SPV_OC_OpSourceContinued, SPV_OC_OpSource,
       SPV_OC_OpSourceExtension, SPV_OC_OpName, SPV_OC_OpMemberName, SPV_OC_OpString,
-      SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
+      SPV_OC_OpLine, SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
       SPV_OC_OpMemoryModel, SPV_OC_OpEntryPoint, SPV_OC_OpExecutionMode,
       SPV_OC_OpCapability, SPV_OC_OpTypeVoid, SPV_OC_OpTypeBool, SPV_OC_OpTypeInt,
       SPV_OC_OpTypeFloat, SPV_OC_OpTypeVector, SPV_OC_OpTypeArray,

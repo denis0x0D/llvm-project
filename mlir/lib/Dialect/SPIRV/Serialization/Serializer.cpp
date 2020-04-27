@@ -41,7 +41,7 @@ static LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
                                            ArrayRef<uint32_t> operands) {
   uint32_t wordCount = 1 + operands.size();
   binary.push_back(spirv::getPrefixedOpcode(wordCount, op));
-    binary.append(operands.begin(), operands.end());
+  binary.append(operands.begin(), operands.end());
   return success();
 }
 
@@ -132,7 +132,7 @@ namespace {
 class Serializer {
 public:
   /// Creates a serializer for the given SPIR-V `module`.
-  explicit Serializer(spirv::ModuleOp module);
+  explicit Serializer(spirv::ModuleOp module, bool emitDebugInfo = false);
 
   /// Serializes the remembered SPIR-V module.
   LogicalResult serialize();
@@ -188,6 +188,8 @@ private:
   uint32_t getOrCreateFunctionID(StringRef fnName);
 
   void processCapability();
+
+  void processDebugInfo();
 
   void processExtension();
 
@@ -382,6 +384,13 @@ private:
   /// An MLIR builder for getting MLIR constructs.
   mlir::Builder mlirBuilder;
 
+  /// A flag which indicates if the debuginfo should be emitted.
+  bool emitDebugInfo = false;
+
+  /// The <id> of the OpString instruction, which specifies a file name, for
+  /// use by other debug instructions.
+  uint32_t fileID = 0;
+
   /// The next available result <id>.
   uint32_t nextID = 1;
 
@@ -394,7 +403,7 @@ private:
   SmallVector<uint32_t, 3> memoryModel;
   SmallVector<uint32_t, 0> entryPoints;
   SmallVector<uint32_t, 4> executionModes;
-  // TODO(antiagainst): debug instructions
+  SmallVector<uint32_t, 0> debug;
   SmallVector<uint32_t, 0> names;
   SmallVector<uint32_t, 0> decorations;
   SmallVector<uint32_t, 0> typesGlobalValues;
@@ -482,8 +491,9 @@ private:
 };
 } // namespace
 
-Serializer::Serializer(spirv::ModuleOp module)
-    : module(module), mlirBuilder(module.getContext()) {}
+Serializer::Serializer(spirv::ModuleOp module, bool emitDebugInfo)
+    : module(module), mlirBuilder(module.getContext()),
+      emitDebugInfo(emitDebugInfo) {}
 
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
@@ -495,6 +505,7 @@ LogicalResult Serializer::serialize() {
   processCapability();
   processExtension();
   processMemoryModel();
+  processDebugInfo();
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
@@ -525,6 +536,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(memoryModel.begin(), memoryModel.end());
   binary.append(entryPoints.begin(), entryPoints.end());
   binary.append(executionModes.begin(), executionModes.end());
+  binary.append(debug.begin(), debug.end());
   binary.append(names.begin(), names.end());
   binary.append(decorations.begin(), decorations.end());
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
@@ -567,6 +579,19 @@ void Serializer::processCapability() {
   for (auto cap : module.vce_triple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
                           {static_cast<uint32_t>(cap)});
+}
+
+void Serializer::processDebugInfo() {
+  if (emitDebugInfo) {
+    auto fileLoc = module.getLoc().dyn_cast<FileLineColLoc>();
+    auto fileName = fileLoc ? fileLoc.getFilename() : "<unknown>";
+    fileID = getNextID();
+    SmallVector<uint32_t, 16> operands;
+    operands.push_back(fileID);
+    spirv::encodeStringLiteralInto(operands, fileName);
+    encodeInstructionInto(debug, spirv::Opcode::OpString, operands);
+    // TODO: Encode more debug instructions.
+  }
 }
 
 void Serializer::processExtension() {
@@ -1839,12 +1864,13 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
 }
 
 LogicalResult spirv::serialize(spirv::ModuleOp module,
-                               SmallVectorImpl<uint32_t> &binary) {
+                               SmallVectorImpl<uint32_t> &binary,
+                               bool emitDebugInfo) {
   if (!module.vce_triple().hasValue())
     return module.emitError(
         "module must have 'vce_triple' attribute to be serializeable");
 
-  Serializer serializer(module);
+  Serializer serializer(module, emitDebugInfo);
 
   if (failed(serializer.serialize()))
     return failure();

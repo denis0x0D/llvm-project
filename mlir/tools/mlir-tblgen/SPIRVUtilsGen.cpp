@@ -492,6 +492,23 @@ static void emitGetOpcodeFunction(const Record *record, Operator const &op,
   os << "}\n";
 }
 
+/// Emits OpLine instruction for the given `opVar` and `binary`.
+static void emitDebugLineOp(StringRef opVar, StringRef binary,
+                            raw_ostream &os) {
+  // According to the SPIR-V spec section 2.4:
+  // "The section after the annotation section is the first section to allow use
+  // of OpLine and OpNoLine debug information."
+  os << formatv("  if (emitDebugInfo) {{\n");
+  os << formatv("    auto fileLoc = {0}.getLoc().dyn_cast<FileLineColLoc>();\n",
+                opVar);
+  os << formatv("    if (fileLoc) {{\n");
+  os << formatv("      encodeInstructionInto({0}, spirv::Opcode::OpLine, "
+                "{{fileID, fileLoc.getLine(), fileLoc.getColumn()});\n",
+                binary);
+  os << formatv("    }\n");
+  os << formatv("  }\n");
+}
+
 /// Forward declaration of function to return the SPIR-V opcode corresponding to
 /// an operation. This function will be generated for all SPV_Op instances that
 /// have hasOpcode = 1.
@@ -660,6 +677,9 @@ static void emitSerializationFunction(const Record *attrClass,
                   opVar, record->getValueAsString("extendedInstSetName"),
                   record->getValueAsInt("extendedInstOpcode"), operands);
   } else {
+    // Emit debug info.
+    emitDebugLineOp(opVar, "functionBody", os);
+
     os << formatv("  encodeInstructionInto("
                   "functionBody, spirv::getOpcode<{0}>(), {1});\n",
                   op.getQualCppClassName(), operands);
@@ -900,10 +920,22 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitOperandDeserialization(op, record->getLoc(), "  ", words, wordIndex,
                              operands, attributes, os);
 
+  os << formatv("  Location loc = unknownLoc;\n");
+  os << formatv("  if (!debugLine.empty()) {{\n");
   os << formatv(
-      "  auto {1} = opBuilder.create<{0}>(unknownLoc, {2}, {3}, {4}); "
-      "(void){1};\n",
-      op.getQualCppClassName(), opVar, resultTypes, operands, attributes);
+      "    auto fileName = debugInfoMap.lookup(debugLine[0]).str();\n");
+  os << formatv("    if (fileName.empty())\n");
+  os << formatv("       fileName = \"<unknown>\";\n");
+  os << formatv("    loc = "
+                "opBuilder.getFileLineColLoc(opBuilder.getIdentifier(fileName),"
+                " debugLine[1], debugLine[2]);\n");
+  os << formatv("    debugLine.clear();\n");
+  os << formatv("  }\n");
+
+  os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
+                "(void){1};\n",
+                op.getQualCppClassName(), opVar, resultTypes, operands,
+                attributes);
   if (op.getNumResults() == 1) {
     os << formatv("  valueMap[{0}] = {1}.getResult();\n\n", valueID, opVar);
   }
