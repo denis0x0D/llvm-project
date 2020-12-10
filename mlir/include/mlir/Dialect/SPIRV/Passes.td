@@ -26,6 +26,10 @@ def SPIRVRewriteInsertsPass : Pass<"spirv-rewrite-inserts", "spirv::ModuleOp"> {
   let summary = "Rewrite sequential chains of spv.CompositeInsert operations into "
                 "spv.CompositeConstruct operations";
   let constructor = "mlir::spirv::createRewriteInsertsPass()";
+  let options = [
+    Option<"replacePartialInsertions", "replace_partial_insertions", "bool",
+    /*default=*/"false", "TODO">
+  ];
 }
 
 def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {

@@ -27,20 +27,31 @@ namespace {
 class RewriteInsertsPass
     : public SPIRVRewriteInsertsPassBase<RewriteInsertsPass> {
 public:
+  RewriteInsertsPass() = default;
+  explicit RewriteInsertsPass(bool replacePartialInsertions)
+      : replacePartialInsetions(replacePartialInsertions) {}
   void runOnOperation() override;
 
 private:
+  void replaceCompleteInsertionChains();
+  void replacePartialInsertionChains();
   /// Collects a sequential insertion chain by the given
   /// `spirv::CompositeInsertOp` operation, if the given operation is the last
   /// in the chain.
   LogicalResult
   collectInsertionChain(spirv::CompositeInsertOp op,
                         SmallVectorImpl<spirv::CompositeInsertOp> &insertions);
+
+  Operation *loadValuesEndingWithInsertions(
+      Operation *op, SmallVectorImpl<Optional<Value>> &members,
+      SmallVectorImpl<spirv::CompositeInsertOp> &chain);
+
+  bool replacePartialInsetions = false;
 };
 
 } // anonymous namespace
 
-void RewriteInsertsPass::runOnOperation() {
+void RewriteInsertsPass::replaceCompleteInsertionChains() {
   SmallVector<SmallVector<spirv::CompositeInsertOp, 4>, 4> workList;
   getOperation().walk([this, &workList](spirv::CompositeInsertOp op) {
     SmallVector<spirv::CompositeInsertOp, 4> insertions;
@@ -70,6 +81,62 @@ void RewriteInsertsPass::runOnOperation() {
       auto *op = insertOp.getOperation();
       if (op->use_empty())
         insertOp.erase();
+    }
+  }
+}
+
+Operation *RewriteInsertsPass::loadValuesEndingWithInsertions(
+    Operation *op, SmallVectorImpl<Optional<Value>> &members,
+    SmallVectorImpl<spirv::CompositeInsertOp> &chain) {
+  auto *it = op;
+  while (auto insertion = dyn_cast<spirv::CompositeInsertOp>(it)) {
+    chain.push_back(insertion);
+    auto indicesArrayAttr = insertion.indices().cast<ArrayAttr>();
+    if (indicesArrayAttr.size() == 1) {
+      auto index = indicesArrayAttr[0].cast<IntegerAttr>().getInt();
+      members[index] = insertion.object();
+      it = insertion.composite().getDefiningOp();
+    } else {
+      break;
+    }
+  }
+  return it;
+}
+
+void RewriteInsertsPass::replacePartialInsertionChains() {
+  SmallVector<spirv::CompositeInsertOp, 4> insertions;
+  getOperation().walk([this, &insertions](spirv::CompositeInsertOp op) {
+    if (op.getType().isa<spirv::StructType>())
+      insertions.push_back(op);
+  });
+
+  DenseMap<Operation *, uint32_t> numUsesMap;
+  for (auto insertionOp : insertions)
+    numUsesMap.insert({insertionOp.getOperation(), 0});
+
+  for (auto insertionOp : insertions) {
+    auto *parentOp = insertionOp.composite().getDefiningOp();
+    if (numUsesMap.count(parentOp))
+      ++numUsesMap[parentOp];
+  }
+
+  SmallVector<Operation *, 4> workList;
+  for (auto insertionOp : insertions) {
+    if (numUsesMap[insertionOp] == 0)
+      workList.push_back(insertionOp);
+  }
+
+  while (workList.size()) {
+    for (auto *op : workList) {
+      SmallVector<spirv::CompositeInsertOp, 4> chain;
+      SmallVector<Optional<Value>, 4> members;
+
+      Operation *base = loadValuesEndingWithInsertions(op, members, chain);
+      auto resultType = cast<spirv::CompositeInsertOp>(base)
+                            .getType()
+                            .cast<spirv::StructType>();
+      for (uint32_t i = 0, e = resultType.getNumElements(); i < e; ++i) {
+      }
     }
   }
 }
@@ -109,7 +176,13 @@ LogicalResult RewriteInsertsPass::collectInsertionChain(
   return failure();
 }
 
+void RewriteInsertsPass::runOnOperation() {
+  replaceCompleteInsertionChains();
+  if (replacePartialInsertions)
+    replacePartialInsertionChains();
+}
+
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
-mlir::spirv::createRewriteInsertsPass() {
-  return std::make_unique<RewriteInsertsPass>();
+mlir::spirv::createRewriteInsertsPass(bool replacePartialInsertions) {
+  return std::make_unique<RewriteInsertsPass>(replacePartialInsertions);
 }

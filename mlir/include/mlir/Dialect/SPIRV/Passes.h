@@ -48,7 +48,9 @@ std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 
 /// Creates an operation pass that rewrites sequential chains of
 /// spv.CompositeInsert into spv.CompositeConstruct.
-std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
+/// TODO: update comments.
+std::unique_ptr<OperationPass<spirv::ModuleOp>>
+createRewriteInsertsPass(bool replacePartialInsertions = false);
 
 //===----------------------------------------------------------------------===//
 // Registration
